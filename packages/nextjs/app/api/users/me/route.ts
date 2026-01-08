@@ -1,6 +1,6 @@
 // packages/nextjs/app/api/users/me/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionFromRequest } from "~~/lib/authSession";
+import { getRawToken, getSessionFromRequest } from "~~/lib/authSession";
 import { getClientIp, rateLimit } from "~~/lib/rateLimit";
 import { createSupabaseServerClient } from "~~/lib/supabaseServer";
 
@@ -30,24 +30,24 @@ type ApiErr = {
  * 3. **Member**: Valid Session + DB Row. (registered: true, user: {...})
  *
  * * @security
- * - Identity is derived ONLY from the JWT.
- * - Rate limited to prevent polling abuse by frontend clients.
+ * - RLS Enabled: Queries DB using the user's specific JWT access token.
+ * - Rate limited to prevent polling abuse.
  */
 export async function GET(req: NextRequest) {
   try {
     // 1. Rate Limiting (Lightweight)
-    // Prevents aggressive polling hooks (e.g., useInterval) from hammering the DB.
     const ip = getClientIp(req);
     const limitResult = await rateLimit(req, `me:${ip}`, 30, 60_000); // 30 req/min
     if (!limitResult.ok && limitResult.response) {
       return limitResult.response;
     }
 
-    // 2. Session Validation
+    // 2. Session & Token Extraction
     const session = await getSessionFromRequest(req);
+    const token = getRawToken(req);
 
-    if (!session) {
-      // Scenario A: User is not logged in (Guest)
+    // If either is missing, treat as Guest
+    if (!session || !token) {
       return NextResponse.json<ApiOk>({
         ok: true,
         registered: false,
@@ -55,15 +55,17 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const walletAddr = session.walletAddr.toLowerCase();
-    const supabase = createSupabaseServerClient();
+    // 3. Database Init (User Mode)
+    // We pass the token so RLS policies are applied.
+    const supabase = createSupabaseServerClient(token);
 
-    // 3. Database Lookup
+    // 4. Database Lookup
     // Check if the authenticated wallet has completed the registration flow.
+    // Note: The `.eq` matches the session, but RLS also enforces `auth.uid() = wallet_addr`.
     const { data, error } = await supabase
       .from("User")
       .select("did, wallet_addr, enc_alg")
-      .eq("wallet_addr", walletAddr)
+      .eq("wallet_addr", session.walletAddr)
       .maybeSingle();
 
     if (error) {
@@ -73,7 +75,6 @@ export async function GET(req: NextRequest) {
 
     if (!data) {
       // Scenario B: User is Logged In (SIWE) but has NOT registered a DID yet.
-      // Frontend should redirect them to /register.
       return NextResponse.json<ApiOk>({
         ok: true,
         registered: false,
