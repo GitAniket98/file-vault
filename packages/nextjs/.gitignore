@@ -37,3 +37,4 @@ yarn-error.log*
 *.tsbuildinfo
 
 ipfs-upload.config.json
+/app/generated/prisma
