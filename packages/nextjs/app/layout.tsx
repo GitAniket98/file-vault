@@ -5,15 +5,18 @@ import "~~/styles/globals.css";
 import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
 
 export const metadata = getMetadata({
-  title: "Scaffold-ETH 2 App",
+  title: "File Vault App",
   description: "Built with 🏗 Scaffold-ETH 2",
 });
 
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   return (
     <html suppressHydrationWarning>
-      <body>
-        <ThemeProvider enableSystem>
+      {/* Update the body tag to suppress hydration warnings.
+        This prevents the red error overlay caused by browser extensions.
+      */}
+      <body suppressHydrationWarning className={`flex flex-col min-h-screen`}>
+        <ThemeProvider>
           <ScaffoldEthAppWithProviders>{children}</ScaffoldEthAppWithProviders>
         </ThemeProvider>
       </body>

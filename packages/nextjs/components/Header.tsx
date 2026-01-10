@@ -116,11 +116,9 @@ export const Header = () => {
           </button>
 
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="relative w-8 h-8">
-              <div className="absolute inset-0 bg-primary/20 rounded-lg transform group-hover:rotate-12 transition-transform"></div>
-              <div className="relative w-full h-full bg-base-100 rounded-lg flex items-center justify-center border border-base-200">
-                <div className="font-black text-primary text-lg">F</div>
-              </div>
+            {/* Logo Image */}
+            <div className="relative w-9 h-9">
+              <Image src="/logo.svg" alt="FileVault Logo" fill className="object-contain" priority />
             </div>
             <span className="font-bold text-lg tracking-tight hidden sm:block">FileVault</span>
           </Link>

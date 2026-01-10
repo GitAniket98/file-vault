@@ -4,6 +4,7 @@
 import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount, useSignMessage } from "wagmi";
+import { ArrowDownTrayIcon, ArrowRightIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
 import {
   type DeviceEncKeyRecord,
   ensureDeviceEncKeyPair,
@@ -32,7 +33,8 @@ import { notification } from "~~/utils/scaffold-eth";
 
 // packages/nextjs/app/register/page.tsx
 
-type Step = "idle" | "authenticating" | "generating_keys" | "registering" | "done" | "error";
+// UI States for the registration flow
+type Step = "idle" | "authenticating" | "generating_keys" | "registering" | "success" | "error";
 type KeyStep = "idle" | "exporting" | "importing";
 
 export default function RegisterPage() {
@@ -45,11 +47,12 @@ export default function RegisterPage() {
 
   const [keyStatus, setKeyStatus] = useState<KeyStep>("idle");
   const [keyMessage, setKeyMessage] = useState<string>("");
+  const [hasBackedUp, setHasBackedUp] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
   const effectiveChainId = chainId ?? Number(process.env.NEXT_PUBLIC_CHAIN_ID || "31337");
 
+  // Core Registration Logic: SIWE -> KeyGen -> Backend Register
   async function handleRegister() {
     try {
       if (!address) {
@@ -62,9 +65,8 @@ export default function RegisterPage() {
       setMessage("Please sign the login message to authenticate...");
       setKeyMessage("");
 
-      // --- STEP 1: AUTHENTICATE (SIWE) ---
-      // We must log in first to get the HttpOnly Session Cookie.
-      // 1. Get Nonce
+      // 1. Authenticate (SIWE Flow)
+      // Get nonce -> Sign message -> Verify with backend -> Set Session Cookie
       const nonceRes = await fetch("/api/auth/nonce", {
         method: "POST",
         body: JSON.stringify({ walletAddr: address }),
@@ -72,37 +74,31 @@ export default function RegisterPage() {
       const { nonce } = await nonceRes.json();
       if (!nonce) throw new Error("Failed to fetch login nonce");
 
-      // 2. Sign Message
       const loginMsg = `FileVault login:\nAddress: ${address.toLowerCase()}\nNonce: ${nonce}`;
       const signature = await signMessageAsync({ message: loginMsg });
 
-      // 3. Verify & Set Cookie
       const verifyRes = await fetch("/api/auth/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ walletAddr: address, signature }),
       });
 
-      if (!verifyRes.ok) {
-        throw new Error("Login failed. Signature rejected.");
-      }
+      if (!verifyRes.ok) throw new Error("Login failed. Signature rejected.");
 
-      // --- STEP 2: PREPARE KEYS ---
+      // 2. Generate Local Keys
       setStatus("generating_keys");
       setMessage("Generating secure device keys...");
 
-      // Ensure device has an ECDH P-256 keypair stored locally
-      const { pubJwk } = await ensureDeviceEncKeyPair();
-      const encAlg = "ECDH-ES+A256GCM"; // Standardized alg name
+      // Generate ECDH P-256 keypair in IndexedDB
+      // 🛡️ CRITICAL: Pass 'address' to namespace this key to the current wallet
+      const { pubJwk } = await ensureDeviceEncKeyPair(address);
+      const encAlg = "ECDH-ES+A256GCM";
       const encPubkeyJson = JSON.stringify(pubJwk);
 
-      // --- STEP 3: REGISTER ---
+      // 3. Register User (DID)
       setStatus("registering");
       setMessage("Saving public key to account...");
 
-      // Call backend to persist registration
-      // Note: We don't need to send the signature again.
-      // The backend will trust us because of the Session Cookie from Step 1.
       const res = await fetch("/api/users/register", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -117,14 +113,10 @@ export default function RegisterPage() {
         throw new Error(json?.error || `Register failed with status ${res.status}`);
       }
 
-      setStatus("done");
-      setMessage("Registration complete! Redirecting...");
-      notification.success("Registration Successful");
-
-      // Redirect to dashboard after short delay
-      setTimeout(() => {
-        router.push("/files");
-      }, 1500);
+      // Stop here to force backup. Do not redirect automatically.
+      setStatus("success");
+      setMessage("Account created successfully!");
+      notification.success("Account Initialized");
     } catch (e: any) {
       console.error(e);
       setStatus("error");
@@ -132,52 +124,56 @@ export default function RegisterPage() {
     }
   }
 
-  // --- Existing Key Management Logic (Unchanged) ---
+  // --- Key Management (Backup & Restore) ---
 
   async function handleExportKeys() {
+    if (!address) return;
     try {
       setKeyStatus("exporting");
-      setKeyMessage("");
 
-      const record = await exportDeviceEncKeyRecord();
+      const record = await exportDeviceEncKeyRecord(address);
       if (!record) {
         setKeyStatus("idle");
-        setKeyMessage("No device encryption key found yet. Run registration at least once.");
+        notification.error("No keys found.");
         return;
       }
 
+      // Generate Standard V3 Backup JSON
+      // This format is identical to the one used in Settings page
       const payload = {
-        version: 1,
+        type: "filevault-full-backup",
+        version: 3,
         createdAt: new Date().toISOString(),
-        note: "FileVault device encryption key backup. Keep this file secret.",
-        data: record as DeviceEncKeyRecord,
+        walletAddr: address.toLowerCase(),
+        note: "FileVault Identity Backup. KEEP PRIVATE.",
+        data: {
+          identity: record,
+          fileKeys: {}, // Empty because this is a fresh account
+        },
       };
 
-      const blob = new Blob([JSON.stringify(payload, null, 2)], {
-        type: "application/json",
-      });
-
+      // Trigger Download
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      const shortAddr = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "wallet";
       a.href = url;
-      a.download = `filevault-device-key-${shortAddr}.json`;
+      a.download = `fv-backup-${address.slice(0, 6)}-${new Date().toISOString().split("T")[0]}.json`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
 
       setKeyStatus("idle");
-      setKeyMessage("Device key backup downloaded. Store it securely (e.g. password manager).");
+      setHasBackedUp(true); // Enable "Continue" button
+      notification.success("Backup downloaded");
     } catch (e: any) {
       console.error(e);
       setKeyStatus("idle");
-      setKeyMessage(e?.message || "Failed to export device key");
+      notification.error("Export failed");
     }
   }
 
   function handleImportClick() {
-    setKeyMessage("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
       fileInputRef.current.click();
@@ -185,131 +181,141 @@ export default function RegisterPage() {
   }
 
   async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!address) return;
     try {
       const file = e.target.files?.[0];
       if (!file) return;
 
       setKeyStatus("importing");
-      setKeyMessage("");
-
       const text = await file.text();
-      let payload: any;
+      let parsed: any;
       try {
-        payload = JSON.parse(text);
+        parsed = JSON.parse(text);
       } catch {
-        throw new Error("Backup file is not valid JSON");
+        throw new Error("Invalid JSON");
       }
 
-      if (!payload || typeof payload !== "object" || !payload.data) {
-        throw new Error("Backup JSON missing `data` field");
-      }
+      // Handle V2 (Full Backup) vs Legacy formats
+      const isV2 = parsed.type === "filevault-full-backup";
+      const record = isV2 ? parsed.data.identity : parsed.data;
 
-      const record = payload.data as DeviceEncKeyRecord;
-      await importDeviceEncKeyRecord(record);
+      if (!record || !record.pubJwk) throw new Error("Invalid backup format");
+
+      // Import key into current wallet namespace
+      await importDeviceEncKeyRecord(address, record as DeviceEncKeyRecord);
 
       setKeyStatus("idle");
-      setKeyMessage("Device encryption key restored from backup. You can now decrypt old shared files again.");
+      setKeyMessage("Keys restored successfully.");
+      notification.success("Keys restored");
     } catch (e: any) {
       console.error(e);
       setKeyStatus("idle");
-      setKeyMessage(e?.message || "Failed to import device key backup");
+      setKeyMessage(e?.message || "Import failed");
     }
   }
 
+  // --- RENDERING ---
+
+  // 1. Success View: Forces user to download backup
+  if (status === "success") {
+    return (
+      <div className="max-w-xl mx-auto p-6 mt-10">
+        <div className="card bg-base-100 shadow-xl border border-success/20">
+          <div className="card-body text-center items-center">
+            <div className="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mb-4">
+              <CheckCircleIcon className="w-10 h-10 text-success" />
+            </div>
+            <h2 className="card-title text-2xl mb-2">You are ready!</h2>
+            <p className="opacity-70 mb-6">
+              Your secure identity has been generated.
+              <br />
+              <strong>You must save your key now</strong>. This file is the ONLY way to recover your data if you switch
+              browsers.
+            </p>
+
+            <button
+              onClick={handleExportKeys}
+              className={`btn btn-primary w-full max-w-sm gap-2 ${hasBackedUp ? "btn-outline" : "shadow-lg animate-bounce"}`}
+            >
+              <ArrowDownTrayIcon className="w-5 h-5" />
+              Download Recovery Kit
+            </button>
+
+            {hasBackedUp && (
+              <div className="mt-6 w-full max-w-sm animate-fade-in">
+                <button onClick={() => router.push("/files")} className="btn btn-success w-full gap-2 text-white">
+                  Continue to Vault
+                  <ArrowRightIcon className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+
+            {!hasBackedUp && <p className="text-xs text-error mt-4">Please download your key to continue.</p>}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Normal Registration Form
   return (
     <div className="max-w-xl mx-auto p-6 space-y-6">
       <h1 className="text-2xl font-semibold">Register for FileVault</h1>
 
       {!address && (
         <div className="alert alert-warning">
-          <span>Please connect your wallet using the header connect button, then come back here.</span>
+          <span>Please connect your wallet first.</span>
         </div>
       )}
 
       {address && (
         <p className="text-sm opacity-80">
-          You are connected as <code className="break-all">{address}</code>
-          <br />
-          Chain ID: <code>{effectiveChainId}</code>
+          Connected:{" "}
+          <code className="bg-base-200 px-1 rounded">
+            {address.slice(0, 6)}...{address.slice(-4)}
+          </code>
         </p>
       )}
 
-      {/* Registration card */}
-      <div className="p-4 rounded-2xl border space-y-3 shadow-sm bg-base-100">
-        <p className="text-sm font-medium">Registration Steps:</p>
-        <ul className="steps steps-vertical lg:steps-horizontal w-full text-xs opacity-90 my-2">
+      {/* Main Action Card */}
+      <div className="p-6 rounded-2xl border space-y-4 shadow-sm bg-base-100">
+        <ul className="steps w-full text-xs opacity-80">
           <li className={`step ${status !== "idle" ? "step-primary" : ""}`}>Sign In</li>
           <li
-            className={`step ${status === "generating_keys" || status === "registering" || status === "done" ? "step-primary" : ""}`}
+            className={`step ${["generating_keys", "registering", "success"].includes(status) ? "step-primary" : ""}`}
           >
-            Generate Keys
+            Keys
           </li>
-          <li className={`step ${status === "registering" || status === "done" ? "step-primary" : ""}`}>
-            Save Profile
-          </li>
+          <li className={`step ${["registering", "success"].includes(status) ? "step-primary" : ""}`}>Register</li>
         </ul>
 
-        <div className="divider my-0"></div>
-
         <button
-          className="btn btn-primary w-full mt-2"
+          className="btn btn-primary w-full"
           onClick={handleRegister}
           disabled={!address || (status !== "idle" && status !== "error")}
         >
-          {status === "idle" && "Initialize Account"}
-          {status === "authenticating" && "Check Wallet for Signature..."}
-          {status === "generating_keys" && "Generating Secure Keys..."}
-          {status === "registering" && "Saving Profile..."}
-          {status === "done" && "Success! Redirecting..."}
-          {status === "error" && "Retry Registration"}
+          {status === "idle" ? "Initialize Account" : "Processing..."}
         </button>
 
         {message && (
           <div
-            className={`mt-4 p-3 rounded-lg text-sm text-center ${status === "error" ? "bg-error/10 text-error" : "bg-base-200"}`}
+            className={`text-center text-sm p-2 rounded ${status === "error" ? "bg-error/10 text-error" : "opacity-60"}`}
           >
             {message}
           </div>
         )}
       </div>
 
-      {/* Backup / Restore card */}
-      <div className="collapse collapse-arrow border rounded-2xl">
+      {/* Collapsible: Restore Existing Backup */}
+      <div className="collapse collapse-arrow border rounded-xl">
         <input type="checkbox" />
-        <div className="collapse-title text-sm font-semibold">Advanced: Backup & Restore Keys</div>
-        <div className="collapse-content space-y-3">
-          <p className="text-xs opacity-80">
-            Your device encryption key is what lets you unwrap AES file keys. If you switch browsers, you must restore
-            this key to view your files.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-2 mt-2">
-            <button
-              className="btn btn-sm btn-outline flex-1"
-              onClick={handleExportKeys}
-              disabled={keyStatus === "exporting"}
-            >
-              {keyStatus === "exporting" ? "Exporting…" : "Download Backup"}
-            </button>
-
-            <button
-              className="btn btn-sm btn-outline flex-1"
-              onClick={handleImportClick}
-              disabled={keyStatus === "importing"}
-            >
-              {keyStatus === "importing" ? "Importing…" : "Restore from Backup"}
-            </button>
-          </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/json"
-            className="hidden"
-            onChange={handleImportFile}
-          />
-
-          {keyMessage && <div className="mt-2 text-xs bg-base-200 p-2 rounded">{keyMessage}</div>}
+        <div className="collapse-title text-sm font-medium">Already have a backup file?</div>
+        <div className="collapse-content">
+          <button onClick={handleImportClick} className="btn btn-sm btn-outline w-full">
+            Restore from Backup
+          </button>
+          <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
+          {keyMessage && <p className="text-xs mt-2 opacity-70">{keyMessage}</p>}
         </div>
       </div>
     </div>
