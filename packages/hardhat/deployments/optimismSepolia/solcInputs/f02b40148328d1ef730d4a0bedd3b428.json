@@ -1,0 +1,36 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "contracts/fileVault.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\n/// @title FileVault - On-chain access control for encrypted off-chain storage\n/// @notice Stores encrypted file references (hash + CID) and manages access\ncontract FileVault {\n    struct File {\n        address uploader; // Who uploaded the file\n        string cid; // IPFS CID of the encrypted file\n        mapping(address => bool) authorized; // Access control (direct grant only)\n    }\n\n    // Mapping: fileHash (SHA-256 of encrypted file) => File struct\n    mapping(bytes32 => File) private files;\n\n    /// @dev Events for frontend/backends to track changes\n    event FileUploaded(bytes32 indexed fileHash, string cid, address indexed uploader, address[] allowedUsers);\n\n    event AccessGranted(bytes32 indexed fileHash, address indexed user);\n    event AccessRevoked(bytes32 indexed fileHash, address indexed user);\n\n    /// @notice Upload a new file reference (CID + hash) and set initial access list\n    /// @param fileHash SHA-256 hash of the encrypted file\n    /// @param cid IPFS CID of the encrypted file\n    /// @param allowedUsers List of addresses initially granted access\n    function storeFileHash(bytes32 fileHash, string calldata cid, address[] calldata allowedUsers) external {\n        require(files[fileHash].uploader == address(0), \"File already exists\");\n\n        File storage f = files[fileHash];\n        f.uploader = msg.sender;\n        f.cid = cid;\n\n        for (uint256 i = 0; i < allowedUsers.length; i++) {\n            f.authorized[allowedUsers[i]] = true;\n        }\n\n        emit FileUploaded(fileHash, cid, msg.sender, allowedUsers);\n    }\n\n    /// @notice Grant access to a user (only uploader can grant)\n    function grantAccess(bytes32 fileHash, address user) external {\n        require(files[fileHash].uploader == msg.sender, \"Not uploader\");\n        files[fileHash].authorized[user] = true;\n        emit AccessGranted(fileHash, user);\n    }\n\n    /// @notice Revoke access from a user (only uploader can revoke)\n    function revokeAccess(bytes32 fileHash, address user) external {\n        require(files[fileHash].uploader == msg.sender, \"Not uploader\");\n        files[fileHash].authorized[user] = false;\n        emit AccessRevoked(fileHash, user);\n    }\n\n    /// @notice Check if a user is authorized to access a file\n    function isAuthorized(bytes32 fileHash, address user) external view returns (bool) {\n        return files[fileHash].authorized[user];\n    }\n\n    /// @notice Get the uploader of a file\n    function getUploader(bytes32 fileHash) external view returns (address) {\n        return files[fileHash].uploader;\n    }\n\n    /// @notice Get the CID of a file\n    function getCid(bytes32 fileHash) external view returns (string memory) {\n        return files[fileHash].cid;\n    }\n}\n"
+    }
+  },
+  "settings": {
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "evmVersion": "paris",
+    "outputSelection": {
+      "*": {
+        "*": [
+          "abi",
+          "evm.bytecode",
+          "evm.deployedBytecode",
+          "evm.methodIdentifiers",
+          "metadata",
+          "devdoc",
+          "userdoc",
+          "storageLayout",
+          "evm.gasEstimates"
+        ],
+        "": [
+          "ast"
+        ]
+      }
+    },
+    "metadata": {
+      "useLiteralContent": true
+    }
+  }
+}

@@ -1,0 +1,340 @@
+{
+  "address": "0x392e5a354a139fE0001A2007bE2E4308c275be94",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "fileHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "AccessGranted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "fileHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "AccessRevoked",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "fileHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "cid",
+          "type": "string"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "uploader",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address[]",
+          "name": "allowedUsers",
+          "type": "address[]"
+        }
+      ],
+      "name": "FileUploaded",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "fileHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getCid",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "fileHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getUploader",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "fileHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "grantAccess",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "fileHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "isAuthorized",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "fileHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "revokeAccess",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "fileHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "string",
+          "name": "cid",
+          "type": "string"
+        },
+        {
+          "internalType": "address[]",
+          "name": "allowedUsers",
+          "type": "address[]"
+        }
+      ],
+      "name": "storeFileHash",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x5668bfc18363a0099955aac4ec218cb52644fbcb9b595c351a81ce2f70f4070a",
+  "receipt": {
+    "to": null,
+    "from": "0x009CEC7B2EE24aB63442C5aA3193FC7acBFde051",
+    "contractAddress": "0x392e5a354a139fE0001A2007bE2E4308c275be94",
+    "transactionIndex": 1,
+    "gasUsed": "531590",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0xf6b094d90770677e1599bdf18e9b61c397281fa0472123766375b8e60e495e2a",
+    "transactionHash": "0x5668bfc18363a0099955aac4ec218cb52644fbcb9b595c351a81ce2f70f4070a",
+    "logs": [],
+    "blockNumber": 36147590,
+    "cumulativeGasUsed": "577736",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "numDeployments": 1,
+  "solcInputHash": "f02b40148328d1ef730d4a0bedd3b428",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.20+commit.a1b79de6\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"}],\"name\":\"AccessGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"}],\"name\":\"AccessRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"cid\",\"type\":\"string\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"uploader\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"allowedUsers\",\"type\":\"address[]\"}],\"name\":\"FileUploaded\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"}],\"name\":\"getCid\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"}],\"name\":\"getUploader\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"}],\"name\":\"grantAccess\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"}],\"name\":\"isAuthorized\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"}],\"name\":\"revokeAccess\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"},{\"internalType\":\"string\",\"name\":\"cid\",\"type\":\"string\"},{\"internalType\":\"address[]\",\"name\":\"allowedUsers\",\"type\":\"address[]\"}],\"name\":\"storeFileHash\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"events\":{\"FileUploaded(bytes32,string,address,address[])\":{\"details\":\"Events for frontend/backends to track changes\"}},\"kind\":\"dev\",\"methods\":{\"storeFileHash(bytes32,string,address[])\":{\"params\":{\"allowedUsers\":\"List of addresses initially granted access\",\"cid\":\"IPFS CID of the encrypted file\",\"fileHash\":\"SHA-256 hash of the encrypted file\"}}},\"title\":\"FileVault - On-chain access control for encrypted off-chain storage\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"getCid(bytes32)\":{\"notice\":\"Get the CID of a file\"},\"getUploader(bytes32)\":{\"notice\":\"Get the uploader of a file\"},\"grantAccess(bytes32,address)\":{\"notice\":\"Grant access to a user (only uploader can grant)\"},\"isAuthorized(bytes32,address)\":{\"notice\":\"Check if a user is authorized to access a file\"},\"revokeAccess(bytes32,address)\":{\"notice\":\"Revoke access from a user (only uploader can revoke)\"},\"storeFileHash(bytes32,string,address[])\":{\"notice\":\"Upload a new file reference (CID + hash) and set initial access list\"}},\"notice\":\"Stores encrypted file references (hash + CID) and manages access\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/fileVault.sol\":\"FileVault\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"contracts/fileVault.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.8.20;\\n\\n/// @title FileVault - On-chain access control for encrypted off-chain storage\\n/// @notice Stores encrypted file references (hash + CID) and manages access\\ncontract FileVault {\\n    struct File {\\n        address uploader; // Who uploaded the file\\n        string cid; // IPFS CID of the encrypted file\\n        mapping(address => bool) authorized; // Access control (direct grant only)\\n    }\\n\\n    // Mapping: fileHash (SHA-256 of encrypted file) => File struct\\n    mapping(bytes32 => File) private files;\\n\\n    /// @dev Events for frontend/backends to track changes\\n    event FileUploaded(bytes32 indexed fileHash, string cid, address indexed uploader, address[] allowedUsers);\\n\\n    event AccessGranted(bytes32 indexed fileHash, address indexed user);\\n    event AccessRevoked(bytes32 indexed fileHash, address indexed user);\\n\\n    /// @notice Upload a new file reference (CID + hash) and set initial access list\\n    /// @param fileHash SHA-256 hash of the encrypted file\\n    /// @param cid IPFS CID of the encrypted file\\n    /// @param allowedUsers List of addresses initially granted access\\n    function storeFileHash(bytes32 fileHash, string calldata cid, address[] calldata allowedUsers) external {\\n        require(files[fileHash].uploader == address(0), \\\"File already exists\\\");\\n\\n        File storage f = files[fileHash];\\n        f.uploader = msg.sender;\\n        f.cid = cid;\\n\\n        for (uint256 i = 0; i < allowedUsers.length; i++) {\\n            f.authorized[allowedUsers[i]] = true;\\n        }\\n\\n        emit FileUploaded(fileHash, cid, msg.sender, allowedUsers);\\n    }\\n\\n    /// @notice Grant access to a user (only uploader can grant)\\n    function grantAccess(bytes32 fileHash, address user) external {\\n        require(files[fileHash].uploader == msg.sender, \\\"Not uploader\\\");\\n        files[fileHash].authorized[user] = true;\\n        emit AccessGranted(fileHash, user);\\n    }\\n\\n    /// @notice Revoke access from a user (only uploader can revoke)\\n    function revokeAccess(bytes32 fileHash, address user) external {\\n        require(files[fileHash].uploader == msg.sender, \\\"Not uploader\\\");\\n        files[fileHash].authorized[user] = false;\\n        emit AccessRevoked(fileHash, user);\\n    }\\n\\n    /// @notice Check if a user is authorized to access a file\\n    function isAuthorized(bytes32 fileHash, address user) external view returns (bool) {\\n        return files[fileHash].authorized[user];\\n    }\\n\\n    /// @notice Get the uploader of a file\\n    function getUploader(bytes32 fileHash) external view returns (address) {\\n        return files[fileHash].uploader;\\n    }\\n\\n    /// @notice Get the CID of a file\\n    function getCid(bytes32 fileHash) external view returns (string memory) {\\n        return files[fileHash].cid;\\n    }\\n}\\n\",\"keccak256\":\"0x6687888f4b25f35814c96271ba3164dfe9465b44507fa8cc9aa659c565e1c796\",\"license\":\"MIT\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b506108a7806100206000396000f3fe608060405234801561001057600080fd5b50600436106100625760003560e01c80631e92a4dd1461006757806340554c3a146100ad57806369e5fa87146100c25780638d53b208146100d5578063956db465146100e8578063aa5de4bd14610133575b600080fd5b6100906100753660046104b0565b6000908152602081905260409020546001600160a01b031690565b6040516001600160a01b0390911681526020015b60405180910390f35b6100c06100bb3660046104e5565b610153565b005b6100c06100d0366004610511565b61020c565b6100c06100e33660046104e5565b61035a565b6101236100f63660046104e5565b6000828152602081815260408083206001600160a01b038516845260020190915290205460ff1692915050565b60405190151581526020016100a4565b6101466101413660046104b0565b61040b565b6040516100a491906105e6565b6000828152602081905260409020546001600160a01b031633146101ad5760405162461bcd60e51b815260206004820152600c60248201526b2737ba103ab83637b0b232b960a11b60448201526064015b60405180910390fd5b6000828152602081815260408083206001600160a01b0385168085526002909101909252808320805460ff1916600117905551909184917ff20afd7b032307b01752ee91e3f6a4b83a5b4ab631f9ab279322fd45634382c09190a35050565b6000858152602081905260409020546001600160a01b0316156102675760405162461bcd60e51b815260206004820152601360248201527246696c6520616c72656164792065786973747360681b60448201526064016101a4565b600085815260208190526040902080546001600160a01b03191633178155600181016102948587836106d3565b5060005b828110156103095760018260020160008686858181106102ba576102ba610794565b90506020020160208101906102cf91906107aa565b6001600160a01b031681526020810191909152604001600020805460ff191691151591909117905580610301816107cc565b915050610298565b50336001600160a01b0316867f63871bfb42ebc1b1c2cff8a2382d4f32cb053002dded6519503ff65e0a41cdae8787878760405161034a94939291906107f3565b60405180910390a3505050505050565b6000828152602081905260409020546001600160a01b031633146103af5760405162461bcd60e51b815260206004820152600c60248201526b2737ba103ab83637b0b232b960a11b60448201526064016101a4565b6000828152602081815260408083206001600160a01b0385168085526002909101909252808320805460ff1916905551909184917fe7906b77ea165c70ad8268ce5b59b778a198edf9c1ae4118378eefdc76fce5f49190a35050565b600081815260208190526040902060010180546060919061042b9061064a565b80601f01602080910402602001604051908101604052809291908181526020018280546104579061064a565b80156104a45780601f10610479576101008083540402835291602001916104a4565b820191906000526020600020905b81548152906001019060200180831161048757829003601f168201915b50505050509050919050565b6000602082840312156104c257600080fd5b5035919050565b80356001600160a01b03811681146104e057600080fd5b919050565b600080604083850312156104f857600080fd5b82359150610508602084016104c9565b90509250929050565b60008060008060006060868803121561052957600080fd5b85359450602086013567ffffffffffffffff8082111561054857600080fd5b818801915088601f83011261055c57600080fd5b81358181111561056b57600080fd5b89602082850101111561057d57600080fd5b60208301965080955050604088013591508082111561059b57600080fd5b818801915088601f8301126105af57600080fd5b8135818111156105be57600080fd5b8960208260051b85010111156105d357600080fd5b9699959850939650602001949392505050565b600060208083528351808285015260005b81811015610613578581018301518582016040015282016105f7565b506000604082860101526040601f19601f8301168501019250505092915050565b634e487b7160e01b600052604160045260246000fd5b600181811c9082168061065e57607f821691505b60208210810361067e57634e487b7160e01b600052602260045260246000fd5b50919050565b601f8211156106ce57600081815260208120601f850160051c810160208610156106ab5750805b601f850160051c820191505b818110156106ca578281556001016106b7565b5050505b505050565b67ffffffffffffffff8311156106eb576106eb610634565b6106ff836106f9835461064a565b83610684565b6000601f841160018114610733576000851561071b5750838201355b600019600387901b1c1916600186901b17835561078d565b600083815260209020601f19861690835b828110156107645786850135825560209485019460019092019101610744565b50868210156107815760001960f88860031b161c19848701351681555b505060018560011b0183555b5050505050565b634e487b7160e01b600052603260045260246000fd5b6000602082840312156107bc57600080fd5b6107c5826104c9565b9392505050565b6000600182016107ec57634e487b7160e01b600052601160045260246000fd5b5060010190565b6040815283604082015283856060830137600060608583018101829052601f19601f87011683018381038201602080860191909152918101859052859183916080015b86831015610864576001600160a01b0361084f856104c9565b16815292810192600192909201918101610836565b999850505050505050505056fea26469706673582212209699d7856afd3c25282abc3249410e2b54b44e71d73bd36b60c0997dcf966d0864736f6c63430008140033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100625760003560e01c80631e92a4dd1461006757806340554c3a146100ad57806369e5fa87146100c25780638d53b208146100d5578063956db465146100e8578063aa5de4bd14610133575b600080fd5b6100906100753660046104b0565b6000908152602081905260409020546001600160a01b031690565b6040516001600160a01b0390911681526020015b60405180910390f35b6100c06100bb3660046104e5565b610153565b005b6100c06100d0366004610511565b61020c565b6100c06100e33660046104e5565b61035a565b6101236100f63660046104e5565b6000828152602081815260408083206001600160a01b038516845260020190915290205460ff1692915050565b60405190151581526020016100a4565b6101466101413660046104b0565b61040b565b6040516100a491906105e6565b6000828152602081905260409020546001600160a01b031633146101ad5760405162461bcd60e51b815260206004820152600c60248201526b2737ba103ab83637b0b232b960a11b60448201526064015b60405180910390fd5b6000828152602081815260408083206001600160a01b0385168085526002909101909252808320805460ff1916600117905551909184917ff20afd7b032307b01752ee91e3f6a4b83a5b4ab631f9ab279322fd45634382c09190a35050565b6000858152602081905260409020546001600160a01b0316156102675760405162461bcd60e51b815260206004820152601360248201527246696c6520616c72656164792065786973747360681b60448201526064016101a4565b600085815260208190526040902080546001600160a01b03191633178155600181016102948587836106d3565b5060005b828110156103095760018260020160008686858181106102ba576102ba610794565b90506020020160208101906102cf91906107aa565b6001600160a01b031681526020810191909152604001600020805460ff191691151591909117905580610301816107cc565b915050610298565b50336001600160a01b0316867f63871bfb42ebc1b1c2cff8a2382d4f32cb053002dded6519503ff65e0a41cdae8787878760405161034a94939291906107f3565b60405180910390a3505050505050565b6000828152602081905260409020546001600160a01b031633146103af5760405162461bcd60e51b815260206004820152600c60248201526b2737ba103ab83637b0b232b960a11b60448201526064016101a4565b6000828152602081815260408083206001600160a01b0385168085526002909101909252808320805460ff1916905551909184917fe7906b77ea165c70ad8268ce5b59b778a198edf9c1ae4118378eefdc76fce5f49190a35050565b600081815260208190526040902060010180546060919061042b9061064a565b80601f01602080910402602001604051908101604052809291908181526020018280546104579061064a565b80156104a45780601f10610479576101008083540402835291602001916104a4565b820191906000526020600020905b81548152906001019060200180831161048757829003601f168201915b50505050509050919050565b6000602082840312156104c257600080fd5b5035919050565b80356001600160a01b03811681146104e057600080fd5b919050565b600080604083850312156104f857600080fd5b82359150610508602084016104c9565b90509250929050565b60008060008060006060868803121561052957600080fd5b85359450602086013567ffffffffffffffff8082111561054857600080fd5b818801915088601f83011261055c57600080fd5b81358181111561056b57600080fd5b89602082850101111561057d57600080fd5b60208301965080955050604088013591508082111561059b57600080fd5b818801915088601f8301126105af57600080fd5b8135818111156105be57600080fd5b8960208260051b85010111156105d357600080fd5b9699959850939650602001949392505050565b600060208083528351808285015260005b81811015610613578581018301518582016040015282016105f7565b506000604082860101526040601f19601f8301168501019250505092915050565b634e487b7160e01b600052604160045260246000fd5b600181811c9082168061065e57607f821691505b60208210810361067e57634e487b7160e01b600052602260045260246000fd5b50919050565b601f8211156106ce57600081815260208120601f850160051c810160208610156106ab5750805b601f850160051c820191505b818110156106ca578281556001016106b7565b5050505b505050565b67ffffffffffffffff8311156106eb576106eb610634565b6106ff836106f9835461064a565b83610684565b6000601f841160018114610733576000851561071b5750838201355b600019600387901b1c1916600186901b17835561078d565b600083815260209020601f19861690835b828110156107645786850135825560209485019460019092019101610744565b50868210156107815760001960f88860031b161c19848701351681555b505060018560011b0183555b5050505050565b634e487b7160e01b600052603260045260246000fd5b6000602082840312156107bc57600080fd5b6107c5826104c9565b9392505050565b6000600182016107ec57634e487b7160e01b600052601160045260246000fd5b5060010190565b6040815283604082015283856060830137600060608583018101829052601f19601f87011683018381038201602080860191909152918101859052859183916080015b86831015610864576001600160a01b0361084f856104c9565b16815292810192600192909201918101610836565b999850505050505050505056fea26469706673582212209699d7856afd3c25282abc3249410e2b54b44e71d73bd36b60c0997dcf966d0864736f6c63430008140033",
+  "devdoc": {
+    "events": {
+      "FileUploaded(bytes32,string,address,address[])": {
+        "details": "Events for frontend/backends to track changes"
+      }
+    },
+    "kind": "dev",
+    "methods": {
+      "storeFileHash(bytes32,string,address[])": {
+        "params": {
+          "allowedUsers": "List of addresses initially granted access",
+          "cid": "IPFS CID of the encrypted file",
+          "fileHash": "SHA-256 hash of the encrypted file"
+        }
+      }
+    },
+    "title": "FileVault - On-chain access control for encrypted off-chain storage",
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {
+      "getCid(bytes32)": {
+        "notice": "Get the CID of a file"
+      },
+      "getUploader(bytes32)": {
+        "notice": "Get the uploader of a file"
+      },
+      "grantAccess(bytes32,address)": {
+        "notice": "Grant access to a user (only uploader can grant)"
+      },
+      "isAuthorized(bytes32,address)": {
+        "notice": "Check if a user is authorized to access a file"
+      },
+      "revokeAccess(bytes32,address)": {
+        "notice": "Revoke access from a user (only uploader can revoke)"
+      },
+      "storeFileHash(bytes32,string,address[])": {
+        "notice": "Upload a new file reference (CID + hash) and set initial access list"
+      }
+    },
+    "notice": "Stores encrypted file references (hash + CID) and manages access",
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 16,
+        "contract": "contracts/fileVault.sol:FileVault",
+        "label": "files",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_mapping(t_bytes32,t_struct(File)11_storage)"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_bool": {
+        "encoding": "inplace",
+        "label": "bool",
+        "numberOfBytes": "1"
+      },
+      "t_bytes32": {
+        "encoding": "inplace",
+        "label": "bytes32",
+        "numberOfBytes": "32"
+      },
+      "t_mapping(t_address,t_bool)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => bool)",
+        "numberOfBytes": "32",
+        "value": "t_bool"
+      },
+      "t_mapping(t_bytes32,t_struct(File)11_storage)": {
+        "encoding": "mapping",
+        "key": "t_bytes32",
+        "label": "mapping(bytes32 => struct FileVault.File)",
+        "numberOfBytes": "32",
+        "value": "t_struct(File)11_storage"
+      },
+      "t_string_storage": {
+        "encoding": "bytes",
+        "label": "string",
+        "numberOfBytes": "32"
+      },
+      "t_struct(File)11_storage": {
+        "encoding": "inplace",
+        "label": "struct FileVault.File",
+        "members": [
+          {
+            "astId": 4,
+            "contract": "contracts/fileVault.sol:FileVault",
+            "label": "uploader",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_address"
+          },
+          {
+            "astId": 6,
+            "contract": "contracts/fileVault.sol:FileVault",
+            "label": "cid",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_string_storage"
+          },
+          {
+            "astId": 10,
+            "contract": "contracts/fileVault.sol:FileVault",
+            "label": "authorized",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_mapping(t_address,t_bool)"
+          }
+        ],
+        "numberOfBytes": "96"
+      }
+    }
+  }
+}
