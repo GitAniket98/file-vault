@@ -1,103 +1,143 @@
+// packages/nextjs/components/Header.tsx
 "use client";
 
-import React, { useRef } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { hardhat } from "viem/chains";
-import { Bars3Icon, BugAntIcon } from "@heroicons/react/24/outline";
+import { useAccount } from "wagmi";
+import { Bars3Icon, ExclamationTriangleIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
+import { AppSidebar } from "~~/components/AppSidebar";
 import { FaucetButton, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
-import { useOutsideClick, useTargetNetwork } from "~~/hooks/scaffold-eth";
 
-type HeaderMenuLink = {
-  label: string;
-  href: string;
-  icon?: React.ReactNode;
-};
+// packages/nextjs/components/Header.tsx
 
-export const menuLinks: HeaderMenuLink[] = [
-  {
-    label: "Home",
-    href: "/",
-  },
-  {
-    label: "Debug Contracts",
-    href: "/debug",
-    icon: <BugAntIcon className="h-4 w-4" />,
-  },
-];
+// packages/nextjs/components/Header.tsx
 
-export const HeaderMenuLinks = () => {
-  const pathname = usePathname();
+// packages/nextjs/components/Header.tsx
+
+// packages/nextjs/components/Header.tsx
+
+// packages/nextjs/components/Header.tsx
+
+// packages/nextjs/components/Header.tsx
+
+// packages/nextjs/components/Header.tsx
+
+// packages/nextjs/components/Header.tsx
+
+// packages/nextjs/components/Header.tsx
+
+// packages/nextjs/components/Header.tsx
+
+/* ---------------- Registration Badge Component ---------------- */
+
+type RegStatus = "unknown" | "loading" | "registered" | "not-registered";
+
+const RegistrationBadge = () => {
+  const { address } = useAccount();
+  const [status, setStatus] = useState<RegStatus>("unknown");
+
+  useEffect(() => {
+    const check = async () => {
+      if (!address) return setStatus("unknown");
+      try {
+        setStatus("loading");
+
+        // 1. Check Session
+        const res = await fetch("/api/users/me");
+        const json = await res.json();
+
+        const isSessionValid =
+          res.ok && json.registered && json.user?.walletAddr.toLowerCase() === address.toLowerCase();
+
+        if (isSessionValid) {
+          setStatus("registered");
+        } else {
+          // 2. Fallback: Check if address exists in DB (even if not logged in)
+          const checkRes = await fetch(`/api/users/check?walletAddr=${address}`);
+          const checkJson = await checkRes.json();
+
+          // If registered in DB but not logged in, we still show "Setup Required"
+          // because they need to Authenticate/Restore Keys.
+          setStatus(checkJson.registered ? "not-registered" : "not-registered");
+        }
+      } catch {
+        setStatus("unknown");
+      }
+    };
+    check();
+  }, [address]);
+
+  if (!address || status === "unknown") return null;
+
+  if (status === "loading") {
+    return (
+      <div className="flex items-center gap-2 bg-base-200 px-3 py-1.5 rounded-full animate-pulse">
+        <div className="w-2 h-2 bg-base-content/30 rounded-full" />
+        <span className="text-xs font-medium opacity-50">Verifying...</span>
+      </div>
+    );
+  }
+
+  if (status === "not-registered") {
+    return (
+      <Link
+        href="/"
+        className="flex items-center gap-2 bg-warning/10 border border-warning/20 px-3 py-1.5 rounded-full hover:bg-warning/20 transition-colors group"
+      >
+        <ExclamationTriangleIcon className="w-4 h-4 text-warning" />
+        <span className="text-xs font-bold text-warning">Login Required</span>
+      </Link>
+    );
+  }
 
   return (
-    <>
-      {menuLinks.map(({ label, href, icon }) => {
-        const isActive = pathname === href;
-        return (
-          <li key={href}>
-            <Link
-              href={href}
-              passHref
-              className={`${
-                isActive ? "bg-secondary shadow-md" : ""
-              } hover:bg-secondary hover:shadow-md focus:!bg-secondary active:!text-neutral py-1.5 px-3 text-sm rounded-full gap-2 grid grid-flow-col`}
-            >
-              {icon}
-              <span>{label}</span>
-            </Link>
-          </li>
-        );
-      })}
-    </>
+    <div className="flex items-center gap-2 bg-success/10 border border-success/20 px-3 py-1.5 rounded-full">
+      <ShieldCheckIcon className="w-4 h-4 text-success" />
+      <span className="text-xs font-bold text-success">Secured</span>
+    </div>
   );
 };
 
-/**
- * Site header
- */
-export const Header = () => {
-  const { targetNetwork } = useTargetNetwork();
-  const isLocalNetwork = targetNetwork.id === hardhat.id;
+/* ---------------- Main Header ---------------- */
 
-  const burgerMenuRef = useRef<HTMLDetailsElement>(null);
-  useOutsideClick(burgerMenuRef, () => {
-    burgerMenuRef?.current?.removeAttribute("open");
-  });
+export const Header = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="sticky lg:static top-0 navbar bg-base-100 min-h-0 shrink-0 justify-between z-20 shadow-md shadow-secondary px-0 sm:px-2">
-      <div className="navbar-start w-auto lg:w-1/2">
-        <details className="dropdown" ref={burgerMenuRef}>
-          <summary className="ml-1 btn btn-ghost lg:hidden hover:bg-transparent">
-            <Bars3Icon className="h-1/2" />
-          </summary>
-          <ul
-            className="menu menu-compact dropdown-content mt-3 p-2 shadow-sm bg-base-100 rounded-box w-52"
-            onClick={() => {
-              burgerMenuRef?.current?.removeAttribute("open");
-            }}
-          >
-            <HeaderMenuLinks />
-          </ul>
-        </details>
-        <Link href="/" passHref className="hidden lg:flex items-center gap-2 ml-4 mr-6 shrink-0">
-          <div className="flex relative w-10 h-10">
-            <Image alt="SE2 logo" className="cursor-pointer" fill src="/logo.svg" />
+    <>
+      <AppSidebar open={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+
+      <div className="sticky top-0 z-30 navbar bg-base-100/80 backdrop-blur-md border-b border-base-200 h-16 min-h-[4rem]">
+        {/* Left: Sidebar Toggle + Brand */}
+        <div className="navbar-start gap-3">
+          <button className="btn btn-ghost btn-square" onClick={() => setIsSidebarOpen(true)} aria-label="Open sidebar">
+            <Bars3Icon className="w-6 h-6" />
+          </button>
+
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="relative w-8 h-8">
+              <div className="absolute inset-0 bg-primary/20 rounded-lg transform group-hover:rotate-12 transition-transform"></div>
+              <div className="relative w-full h-full bg-base-100 rounded-lg flex items-center justify-center border border-base-200">
+                <div className="font-black text-primary text-lg">F</div>
+              </div>
+            </div>
+            <span className="font-bold text-lg tracking-tight hidden sm:block">FileVault</span>
+          </Link>
+        </div>
+
+        {/* Center: Empty (Cleaner Look) */}
+        <div className="navbar-center hidden md:flex">{/* Optional: Add Search Bar here later */}</div>
+
+        {/* Right: Status + Wallet */}
+        <div className="navbar-end gap-3">
+          <RegistrationBadge />
+          <RainbowKitCustomConnectButton />
+          <div className="hidden sm:block">
+            <FaucetButton />
           </div>
-          <div className="flex flex-col">
-            <span className="font-bold leading-tight">Scaffold-ETH</span>
-            <span className="text-xs">Ethereum dev stack</span>
-          </div>
-        </Link>
-        <ul className="hidden lg:flex lg:flex-nowrap menu menu-horizontal px-1 gap-2">
-          <HeaderMenuLinks />
-        </ul>
+        </div>
       </div>
-      <div className="navbar-end grow mr-4">
-        <RainbowKitCustomConnectButton />
-        {isLocalNetwork && <FaucetButton />}
-      </div>
-    </div>
+    </>
   );
 };
