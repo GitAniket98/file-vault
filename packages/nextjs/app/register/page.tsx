@@ -90,7 +90,7 @@ export default function RegisterPage() {
       setMessage("Generating secure device keys...");
 
       // Generate ECDH P-256 keypair in IndexedDB
-      // 🛡️ CRITICAL: Pass 'address' to namespace this key to the current wallet
+      // Pass 'address' to namespace this key to the current wallet
       const { pubJwk } = await ensureDeviceEncKeyPair(address);
       const encAlg = "ECDH-ES+A256GCM";
       const encPubkeyJson = JSON.stringify(pubJwk);
@@ -113,7 +113,6 @@ export default function RegisterPage() {
         throw new Error(json?.error || `Register failed with status ${res.status}`);
       }
 
-      // Stop here to force backup. Do not redirect automatically.
       setStatus("success");
       setMessage("Account created successfully!");
       notification.success("Account Initialized");
@@ -124,7 +123,7 @@ export default function RegisterPage() {
     }
   }
 
-  // --- Key Management (Backup & Restore) ---
+  // --- Key Management  ---
 
   async function handleExportKeys() {
     if (!address) return;
@@ -139,7 +138,7 @@ export default function RegisterPage() {
       }
 
       // Generate Standard V3 Backup JSON
-      // This format is identical to the one used in Settings page
+
       const payload = {
         type: "filevault-full-backup",
         version: 3,

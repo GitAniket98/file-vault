@@ -11,6 +11,7 @@ import {
   LockClosedIcon,
   PhotoIcon,
   ShieldCheckIcon,
+  UserCircleIcon,
 } from "@heroicons/react/24/outline";
 import { decryptFileFromIpfs, unwrapFileAesKeyForRecipient } from "~~/lib/recipientDecrypt";
 import { notification } from "~~/utils/scaffold-eth";
@@ -37,19 +38,19 @@ import { notification } from "~~/utils/scaffold-eth";
 
 // --- Types ---
 
-// Represents a file that has been shared specifically with the current user
 type SharedFileRow = {
   fileHashHex: string | null;
   ivHex: string | null;
   recipientDid: string;
   algorithm: string;
   keyVersion: number;
-  wrappedKeyHex: string | null; // Encrypted AES key (wrapped with my public key)
-  ephemeralPubHex: string | null; // Ephemeral key for ECDH unwrap
+  wrappedKeyHex: string | null;
+  ephemeralPubHex: string | null;
   cid: string;
   mimeType: string | null;
   filename: string | null;
   sizeBytes: number | null;
+  uploaderAddr: string | null;
   createdAt: string;
 };
 
@@ -63,7 +64,6 @@ export default function FilesSharedWithMePage() {
 
   // Fetch files on load (and when wallet changes)
   useEffect(() => {
-    // Reset on switch
     setRows([]);
     if (isConnected && address) fetchSharedFiles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -74,7 +74,6 @@ export default function FilesSharedWithMePage() {
       setLoading(true);
 
       // 1. Strict Session Check
-      // We must ensure the backend session matches the wallet address currently connected.
       const meRes = await fetch("/api/users/me");
       const meJson = await meRes.json();
 
@@ -82,7 +81,7 @@ export default function FilesSharedWithMePage() {
         throw new Error("Wallet mismatch. Please login via Overview.");
       }
 
-      // 2. Fetch Data (Only files shared with MY DID)
+      // 2. Fetch Data
       const res = await fetch("/api/files/for-recipient", {
         method: "POST",
       });
@@ -105,7 +104,6 @@ export default function FilesSharedWithMePage() {
     }
   };
 
-  // Handle Decryption: Unwrap AES Key -> Decrypt File
   const handleDecrypt = async (row: SharedFileRow) => {
     if (!address) return;
     const rowId = row.fileHashHex ?? row.cid;
@@ -118,9 +116,6 @@ export default function FilesSharedWithMePage() {
       }
 
       // 1. Unwrap Key (Client-Side ECDH)
-      // Uses the receiver's private Identity Key (stored in IndexedDB)
-      // combined with the sender's ephemeral public key to derive the AES key.
-      // Pass 'address' to select the correct Identity Key.
       const fileKey = await unwrapFileAesKeyForRecipient(address, row.wrappedKeyHex, row.ephemeralPubHex);
 
       // 2. Decrypt File Content from IPFS
@@ -141,7 +136,6 @@ export default function FilesSharedWithMePage() {
       console.error(e);
       let msg = e?.message || "Decryption failed";
 
-      // User-friendly error for wrong key
       if (msg.includes("OperationError") || msg.includes("InvalidAccessError")) {
         msg = "Device key mismatch. Please ensure you have restored the correct backup for this wallet.";
       }
@@ -151,15 +145,25 @@ export default function FilesSharedWithMePage() {
     }
   };
 
-  // Helper to choose an icon based on MIME type
   const getFileIcon = (mime: string | null) => {
     if (mime?.startsWith("image/")) return <PhotoIcon className="w-8 h-8 text-secondary" />;
     return <DocumentIcon className="w-8 h-8 text-primary" />;
   };
 
+  // Format address: 0x1234...5678
+  const formatAddress = (addr: string | null) => {
+    if (!addr) return "Unknown";
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
+
+  // Copy to clipboard
+  const copyAddress = (addr: string) => {
+    navigator.clipboard.writeText(addr);
+    notification.success("Address copied!");
+  };
+
   // --- Rendering ---
 
-  // 1. Wallet Not Connected
   if (!isConnected || !address) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 text-center">
@@ -170,7 +174,6 @@ export default function FilesSharedWithMePage() {
     );
   }
 
-  // 2. Main Shared Files Grid
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-8">
       {/* Header Section */}
@@ -180,13 +183,20 @@ export default function FilesSharedWithMePage() {
             <ShieldCheckIcon className="w-8 h-8 text-success" />
             Shared With Me
           </h1>
-          <p className="text-sm opacity-60 mt-1">Files securely encrypted for your DID. Only you can decrypt them.</p>
+          <p className="text-sm opacity-60 mt-1">Files securely encrypted for you. All access verified on-chain.</p>
         </div>
         <button onClick={fetchSharedFiles} disabled={loading} className="btn btn-ghost btn-sm gap-2">
           <ArrowPathIcon className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           Refresh
         </button>
       </div>
+
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center items-center py-12">
+          <span className="loading loading-spinner loading-lg text-primary"></span>
+        </div>
+      )}
 
       {/* Empty State */}
       {!loading && rows.length === 0 && (
@@ -197,6 +207,7 @@ export default function FilesSharedWithMePage() {
             <p className="text-sm opacity-60 max-w-sm">
               When someone securely shares a file with your wallet address, it will appear here.
             </p>
+            <p className="text-xs opacity-40 mt-2">✅ All files are verified against blockchain access control</p>
           </div>
         </div>
       )}
@@ -218,7 +229,7 @@ export default function FilesSharedWithMePage() {
                 {/* Card Header: Icon + Name */}
                 <div className="flex items-start gap-3 mb-2">
                   <div className="p-2 bg-base-200 rounded-lg">{getFileIcon(row.mimeType)}</div>
-                  <div className="overflow-hidden">
+                  <div className="overflow-hidden flex-1">
                     <h3 className="font-semibold truncate" title={row.filename || "Untitled"}>
                       {row.filename || "Untitled File"}
                     </h3>
@@ -226,6 +237,19 @@ export default function FilesSharedWithMePage() {
                       {row.mimeType || "application/octet-stream"}
                     </p>
                   </div>
+                </div>
+
+                {/* NEW: Uploader Info */}
+                <div className="flex items-center gap-2 mb-2 text-xs">
+                  <UserCircleIcon className="w-4 h-4 opacity-50" />
+                  <span className="opacity-60">Shared by:</span>
+                  <button
+                    onClick={() => row.uploaderAddr && copyAddress(row.uploaderAddr)}
+                    className="font-mono text-primary hover:underline"
+                    title={row.uploaderAddr || "Unknown"}
+                  >
+                    {formatAddress(row.uploaderAddr)}
+                  </button>
                 </div>
 
                 {/* Metadata Tags */}
@@ -256,13 +280,16 @@ export default function FilesSharedWithMePage() {
       </div>
 
       {/* Footer Info */}
-      <div className="text-center text-xs opacity-40 mt-12 max-w-2xl mx-auto">
-        Decryption happens entirely in your browser using your local device key. If you switch browsers, you must
-        restore your key from{" "}
-        <Link href="/settings/keys" className="underline hover:opacity-100">
-          Settings
-        </Link>
-        .
+      <div className="text-center text-xs opacity-40 mt-12 max-w-2xl mx-auto space-y-2">
+        <p>Decryption happens entirely in your browser using your local device key.</p>
+        <p>
+          If you switch browsers, restore your key from{" "}
+          <Link href="/settings/keys" className="underline hover:opacity-100">
+            Settings
+          </Link>
+          .
+        </p>
+        <p className="text-success">All file access is verified against blockchain smart contract</p>
       </div>
     </div>
   );

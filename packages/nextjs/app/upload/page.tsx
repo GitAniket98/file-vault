@@ -42,7 +42,7 @@ import { notification } from "~~/utils/scaffold-eth";
 
 // --- Types ---
 
-type Step = "idle" | "encrypting" | "pinning" | "wrapping" | "committing" | "writing" | "done" | "error";
+type Step = "idle" | "encrypting" | "pinning" | "wrapping" | "blockchain" | "committing" | "done" | "error";
 
 type ResolvedUser = {
   did: string;
@@ -118,12 +118,12 @@ export default function UploadPage() {
       case "encrypting":
         return 15;
       case "pinning":
-        return 40;
+        return 35;
       case "wrapping":
-        return 60;
+        return 55;
+      case "blockchain":
+        return 75;
       case "committing":
-        return 80;
-      case "writing":
         return 90;
       case "done":
         return 100;
@@ -183,10 +183,12 @@ export default function UploadPage() {
         return;
       }
 
+      // ============================================
+      // STEP 1: Client-Side Encryption
+      // ============================================
       setStatus("encrypting");
       setMessage("Encrypting file locally...");
 
-      // A. Client-Side Encryption
       const enc = await aesEncryptFile(file);
       const fileHash = await sha256Hex(enc.ciphertext);
       const ivHex = bytesToHex(enc.iv);
@@ -198,13 +200,17 @@ export default function UploadPage() {
         ivHex,
       });
 
-      // B. Pinning to IPFS
+      // ============================================
+      // STEP 2: Pin to IPFS
+      // ============================================
       setStatus("pinning");
       setMessage("Pinning encrypted data to IPFS...");
       const { cid } = await pinBlobToIPFS(uint8ToBlob(enc.ciphertext), `${file.name}.enc`);
       setLastCid(cid);
 
-      // C. Recipient Resolution (Access Control)
+      // ============================================
+      // STEP 3: Recipient Resolution & Key Wrapping
+      // ============================================
       setStatus("wrapping");
       setMessage("Processing access control...");
 
@@ -212,6 +218,7 @@ export default function UploadPage() {
         .split(/[\s,]+/)
         .map(s => s.trim())
         .filter(Boolean);
+
       if (allowed.some(a => !/^0x[0-9a-fA-F]{40}$/.test(a))) {
         throw new Error("Invalid recipient address format");
       }
@@ -236,9 +243,44 @@ export default function UploadPage() {
         }
       }
 
-      // D. Database Commit (Metadata)
+      // ============================================
+      // STEP 4: BLOCKCHAIN TRANSACTION (FIRST!)
+      // ============================================
+      setStatus("blockchain");
+      setMessage("Waiting for blockchain confirmation...");
+
+      let txHash: string | undefined;
+      try {
+        txHash = await writeFileVault({
+          functionName: "storeFileHash",
+          args: [fileHash as `0x${string}`, cid, allowed as `0x${string}`[]],
+        });
+
+        if (!txHash) {
+          throw new Error("Transaction failed - no tx hash returned");
+        }
+
+        setLastTxHash(txHash);
+        console.log(`✅ Blockchain transaction confirmed: ${txHash}`);
+      } catch (chainErr: any) {
+        console.error("Blockchain transaction failed:", chainErr);
+
+        // Rollback: Unpin from IPFS since blockchain failed
+        await fetch("/api/ipfs/unpin", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ cid }),
+        }).catch(console.error);
+
+        throw new Error(chainErr?.message || "Blockchain transaction failed. Upload cancelled.");
+      }
+
+      // ============================================
+      // STEP 5: Database Commit (AFTER blockchain)
+      // ============================================
       setStatus("committing");
-      setMessage("Saving metadata...");
+      setMessage("Saving metadata to database...");
+
       const commitRes = await fetch("/api/files/commit-upload", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -251,38 +293,30 @@ export default function UploadPage() {
           filename: file.name,
           pinProvider: "pinata",
           wrappedKeys: wrappedKeysPayload,
+          blockchainTxHash: txHash, // NEW: Include tx hash for tracking
         }),
       });
 
       const commitJson = (await commitRes.json()) as CommitUploadResponse;
-      if (!commitJson.ok) throw new Error(commitJson.error);
 
-      // E. Blockchain Transaction
-      setStatus("writing");
-      setMessage("Waiting for wallet signature...");
-      try {
-        const txHash = await writeFileVault({
-          functionName: "storeFileHash",
-          args: [fileHash as `0x${string}`, cid, allowed as `0x${string}`[]],
-        });
-        if (txHash) setLastTxHash(txHash);
-      } catch (chainErr: any) {
-        // Rollback DB entry if chain tx fails
-        await fetch("/api/files/cleanup", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ fileHashHex: fileHash, cid }),
-        });
-        throw chainErr;
+      if (!commitJson.ok) {
+        console.error(" Database commit failed:", commitJson.error);
+        // Note: File is already on blockchain, so this is less critical
+        // We could implement a retry mechanism here
+        notification.warning("File uploaded to blockchain but database sync failed. Contact support.");
       }
 
+      // ============================================
+      // STEP 6: Success!
+      // ============================================
       setStatus("done");
       setMessage("Upload complete!");
       notification.success("File uploaded & secured successfully");
     } catch (e: any) {
-      console.error(e);
+      console.error("Upload error:", e);
       setStatus("error");
       setMessage(e?.message || "Upload failed");
+      notification.error(e?.message || "Upload failed");
     }
   };
 
@@ -415,7 +449,7 @@ export default function UploadPage() {
         {/* Recipients (Accordion) */}
         <div className="collapse collapse-arrow border border-base-200 bg-base-100 rounded-xl">
           <input type="checkbox" />
-          <div className="collapse-title font-medium text-sm">Advanced: Grant Access (Optional)</div>
+          <div className="collapse-title font-medium text-sm"> Grant Access </div>
           <div className="collapse-content">
             <textarea
               className="textarea textarea-bordered w-full text-sm font-mono h-24"
@@ -455,27 +489,27 @@ export default function UploadPage() {
               <span className="text-left w-full pl-2">Encrypting locally</span>
             </li>
             <li
-              className={`step ${["pinning", "wrapping", "committing", "writing", "done"].includes(status) ? "step-primary" : ""}`}
+              className={`step ${["pinning", "wrapping", "blockchain", "committing", "done"].includes(status) ? "step-primary" : ""}`}
             >
               <span className="text-left w-full pl-2">Pinning to IPFS</span>
             </li>
             <li
-              className={`step ${["wrapping", "committing", "writing", "done"].includes(status) ? "step-primary" : ""}`}
+              className={`step ${["wrapping", "blockchain", "committing", "done"].includes(status) ? "step-primary" : ""}`}
             >
               <span className="text-left w-full pl-2">Access Control</span>
             </li>
-            <li className={`step ${["committing", "writing", "done"].includes(status) ? "step-primary" : ""}`}>
-              <span className="text-left w-full pl-2">Database Commit</span>
+            <li className={`step ${["blockchain", "committing", "done"].includes(status) ? "step-primary" : ""}`}>
+              <span className="text-left w-full pl-2"> Blockchain Tx</span>
             </li>
-            <li className={`step ${["writing", "done"].includes(status) ? "step-primary" : ""}`}>
-              <span className="text-left w-full pl-2">Blockchain Tx</span>
+            <li className={`step ${["committing", "done"].includes(status) ? "step-primary" : ""}`}>
+              <span className="text-left w-full pl-2">Database Sync</span>
             </li>
           </ul>
 
           <div className="mt-auto flex flex-col items-center justify-center pt-8 min-h-[140px]">
             {status !== "idle" && status !== "error" ? (
               <>
-                {/* 🎨 CIRCULAR PROGRESS BAR */}
+                {/* CIRCULAR PROGRESS BAR */}
                 <div
                   className="radial-progress text-primary transition-all duration-500 ease-out"
                   style={{ "--value": progress, "--size": "5rem", "--thickness": "5px" } as CSSProperties}

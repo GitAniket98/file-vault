@@ -1,4 +1,3 @@
-// packages/nextjs/app/files/page.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -12,6 +11,7 @@ import {
   LockClosedIcon,
   PhotoIcon,
   Square2StackIcon,
+  TrashIcon,
   UserGroupIcon,
 } from "@heroicons/react/24/outline";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
@@ -21,32 +21,10 @@ import { type RecipientUser, wrapAesKeyForRecipients } from "~~/lib/wrapKeys";
 import { aesDecryptToBlob } from "~~/utils/crypto";
 import { notification } from "~~/utils/scaffold-eth";
 
-// packages/nextjs/app/files/page.tsx
-
-// packages/nextjs/app/files/page.tsx
-
-// packages/nextjs/app/files/page.tsx
-
-// packages/nextjs/app/files/page.tsx
-
-// packages/nextjs/app/files/page.tsx
-
-// packages/nextjs/app/files/page.tsx
-
-// packages/nextjs/app/files/page.tsx
-
-// packages/nextjs/app/files/page.tsx
-
-// packages/nextjs/app/files/page.tsx
-
-// packages/nextjs/app/files/page.tsx
-
 // --- Types ---
-
-// Represents a file row from the database/API
 type FileRow = {
   id: string;
-  file_hash: string; // Hex string (0x...) or escaped bytea (\x...)
+  file_hash: string;
   cid: string;
   iv: string | null;
   uploader_did: string | null;
@@ -63,7 +41,6 @@ type FileRow = {
 
 type FilesApiResponse = { ok: true; files: FileRow[] } | { ok: false; error: string };
 
-// Represents a user who has access to a specific file
 type RecipientRow = {
   recipientDid: string;
   walletAddr: string;
@@ -84,11 +61,8 @@ type ResolveUser = {
 type ResolveResponse = { ok: true; found: ResolveUser[]; missing: string[] } | { ok: false; error: string };
 
 // --- Helper Components ---
-
-// Simple component to display a value with a copy button
 const CopyableValue = ({ label, value, isLink = false }: { label: string; value: string | null; isLink?: boolean }) => {
   const [copied, setCopied] = useState(false);
-
   if (!value) return null;
 
   const handleCopy = () => {
@@ -104,9 +78,9 @@ const CopyableValue = ({ label, value, isLink = false }: { label: string; value:
       <span className="font-semibold text-base-content/70 w-24">{label}:</span>
       <div className="flex items-center gap-2 bg-base-200 px-2 py-1 rounded-md">
         {isLink ? (
-          <Link href={value} target="_blank" rel="noreferrer" className="link link-primary font-mono text-xs">
+          <a href={value} target="_blank" rel="noreferrer" className="link link-primary font-mono text-xs">
             {truncated}
-          </Link>
+          </a>
         ) : (
           <span className="font-mono text-xs">{truncated}</span>
         )}
@@ -124,6 +98,9 @@ export default function FilesPage() {
   const [files, setFiles] = useState<FileRow[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // State for Delete Action
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
   const { writeContractAsync: writeFileVault } = useScaffoldWriteContract({
     contractName: "FileVault",
   });
@@ -139,14 +116,10 @@ export default function FilesPage() {
 
   const ipfsGatewayBase = "https://gateway.pinata.cloud/ipfs";
 
-  // Effect: Fetch files on load or address change
   useEffect(() => {
-    // Reset state on wallet switch
     setFiles([]);
     setError(null);
-
     if (!isConnected || !address) return;
-
     fetchFiles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address, isConnected]);
@@ -155,9 +128,6 @@ export default function FilesPage() {
     try {
       setLoading(true);
       setError(null);
-
-      // 1. Strict Session Validation
-      // Ensure the backend session cookie matches the currently connected wallet
       const meRes = await fetch("/api/users/me");
       const meJson = await meRes.json();
 
@@ -165,7 +135,6 @@ export default function FilesPage() {
         throw new Error("Wallet mismatch. Please return to Overview to login.");
       }
 
-      // 2. Fetch Files (Owned by current user)
       const res = await fetch(`/api/files/by-uploader`);
       const json = (await res.json()) as FilesApiResponse;
 
@@ -185,43 +154,77 @@ export default function FilesPage() {
     }
   };
 
-  // ---- Logic: Client-Side Decryption ----
+  // Helper to normalize hash
+  function computeFileHashHex(file: FileRow): `0x${string}` | null {
+    if (!file.file_hash) return null;
+    const raw = file.file_hash.startsWith("\\x") ? `0x${file.file_hash.slice(2)}` : file.file_hash;
+    return /^0x[0-9a-fA-F]{64}$/.test(raw) ? (raw as `0x${string}`) : null;
+  }
 
-  async function handleDecrypt(file: FileRow) {
-    if (!address) return;
+  // ---- Logic: Delete File (New Feature) ----
+  async function handleDelete(file: FileRow) {
+    if (!confirm("Are you sure? This will delete the file from the blockchain and storage.")) return;
+
+    const fileHashHex = computeFileHashHex(file);
+    if (!fileHashHex) return notification.error("Invalid file hash");
 
     try {
+      setIsDeleting(file.id);
+
+      // 1. On-Chain Delete (The Source of Truth)
+      // This revokes access for everyone permanently.
+      await writeFileVault({
+        functionName: "deleteFile",
+        args: [fileHashHex],
+      });
+
+      // 2. Off-Chain Cleanup (Database & IPFS)
+      // We call the API which will verify verifyOwner(fileHash) before deleting.
+      const res = await fetch("/api/files/cleanup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileHashHex, cid: file.cid }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.error || "Cleanup failed");
+
+      notification.success("File deleted successfully");
+
+      // Remove from UI immediately
+      setFiles(prev => prev.filter(f => f.id !== file.id));
+    } catch (e: any) {
+      console.error("Delete error:", e);
+      notification.error(e.message || "Failed to delete file");
+    } finally {
+      setIsDeleting(null);
+    }
+  }
+
+  // ---- Logic: Client-Side Decryption ----
+  async function handleDecrypt(file: FileRow) {
+    if (!address) return;
+    try {
       if (!file.cid) throw new Error("No CID available");
+      const fileHashHex = computeFileHashHex(file);
+      if (!fileHashHex) throw new Error("Invalid hash");
 
-      // Normalize file hash format (remove PostgreSQL escape sequence if present)
-      const fileHashHex = file.file_hash?.startsWith("\\x")
-        ? (`0x${file.file_hash.slice(2)}` as `0x${string}`)
-        : (file.file_hash as `0x${string}`);
-
-      // NAMESPACE CHECK: Load key specifically for THIS user address
-      // This prevents User B from accessing keys meant for User A on the same device.
       const keyRec = await loadDeviceKey(address, fileHashHex);
-
       if (!keyRec) {
         notification.error("No local encryption key found on this device.");
         return;
       }
 
       const toastId = notification.loading("Fetching & Decrypting...");
-
-      // 1. Fetch Encrypted Data from IPFS
       const res = await fetch(`${ipfsGatewayBase}/${file.cid}`);
       if (!res.ok) throw new Error("IPFS fetch failed");
       const ciphertext = new Uint8Array(await res.arrayBuffer());
 
-      // 2. Decrypt using WebCrypto (AES-GCM)
       const mimeType = file.mime_type || "application/octet-stream";
       const blob = await aesDecryptToBlob(ciphertext, hexToUint8(keyRec.ivHex), hexToUint8(keyRec.rawKeyHex), mimeType);
 
-      // 3. Trigger Browser Download
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      // Remove .enc extension if present for cleanliness
       a.download = (file.filename || "decrypted.bin").replace(/\.(enc|cipher)$/i, "");
       document.body.appendChild(a);
       a.click();
@@ -235,16 +238,7 @@ export default function FilesPage() {
     }
   }
 
-  // ---- Logic: Access Management (Grant/Revoke) ----
-
-  // Helper to ensure hash format is 0x...
-  function computeFileHashHex(file: FileRow): `0x${string}` | null {
-    if (!file.file_hash) return null;
-    const raw = file.file_hash.startsWith("\\x") ? `0x${file.file_hash.slice(2)}` : file.file_hash;
-    return /^0x[0-9a-fA-F]{64}$/.test(raw) ? (raw as `0x${string}`) : null;
-  }
-
-  // Fetch list of users who currently have access
+  // ---- Logic: Access Management ----
   async function loadRecipients(file: FileRow) {
     const fileHashHex = computeFileHashHex(file);
     if (!fileHashHex) throw new Error("Invalid fileHash");
@@ -255,7 +249,6 @@ export default function FilesPage() {
     setAccessRecipients(json.recipients);
   }
 
-  // Open the Access Modal
   async function openManageAccess(file: FileRow) {
     try {
       setAccessFile(file);
@@ -270,7 +263,6 @@ export default function FilesPage() {
     }
   }
 
-  // Grant Access: Resolve User -> Wrap Key -> Save to DB -> Grant on Chain
   async function handleGrant() {
     if (!accessFile || !address) return;
     const fileHashHex = computeFileHashHex(accessFile);
@@ -283,7 +275,6 @@ export default function FilesPage() {
       setGrantBusy(true);
       setAccessError(null);
 
-      // 1. Resolve Recipient (Get their Public Key)
       const res = await fetch("/api/users/resolve", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -295,20 +286,16 @@ export default function FilesPage() {
       }
       const user = resolveJson.found[0] as ResolveUser & RecipientUser;
 
-      // 2. Load My Local Key (Namespaced)
       const keyRec = await loadDeviceKey(address, fileHashHex);
       if (!keyRec) throw new Error("Local encryption key not found. Cannot grant access.");
 
-      // 3. Wrap (Encrypt) the File Key for the Recipient
       const [wrapped] = await wrapAesKeyForRecipients(hexToUint8(keyRec.rawKeyHex), [user]);
 
-      // 4. On-Chain Grant (Smart Contract)
       await writeFileVault({
         functionName: "grantAccess",
         args: [fileHashHex, addr as `0x${string}`],
       });
 
-      // 5. Off-Chain Save (Store Wrapped Key)
       const wrapRes = await fetch("/api/files/wrap-keys", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -316,7 +303,6 @@ export default function FilesPage() {
       });
       if (!wrapRes.ok) throw new Error("Failed to save wrapped key.");
 
-      // Refresh list
       await loadRecipients(accessFile);
       setAddrToGrant("");
       notification.success("Access granted!");
@@ -327,7 +313,6 @@ export default function FilesPage() {
     }
   }
 
-  // Revoke Access: Chain Revoke + DB Delete
   async function handleRevoke(r: RecipientRow) {
     if (!accessFile) return;
     const fileHashHex = computeFileHashHex(accessFile);
@@ -336,13 +321,11 @@ export default function FilesPage() {
     try {
       setRevokeBusyId(r.recipientDid);
 
-      // 1. On-Chain Revoke
       await writeFileVault({
         functionName: "revokeAccess",
         args: [fileHashHex, r.walletAddr as `0x${string}`],
       });
 
-      // 2. Off-Chain Delete (Remove Wrapped Key)
       await fetch("/api/files/revoke-recipient", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -358,8 +341,6 @@ export default function FilesPage() {
     }
   }
 
-  // --- Rendering Helpers ---
-
   const getFileIcon = (mime: string | null) => {
     if (mime?.startsWith("image/")) return <PhotoIcon className="w-8 h-8 text-secondary" />;
     return <DocumentIcon className="w-8 h-8 text-primary" />;
@@ -372,29 +353,22 @@ export default function FilesPage() {
     return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
   };
 
-  // --- Main Render ---
-
   if (!isConnected || !address) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
         <LockClosedIcon className="w-16 h-16 text-base-content/30" />
         <h1 className="text-2xl font-bold">Encrypted Storage</h1>
-        <p className="opacity-60 text-center max-w-md">Please connect your wallet to access your secure vault.</p>
+        <p className="opacity-60 text-center max-w-md">Please connect your wallet.</p>
       </div>
     );
   }
 
-  // Mismatch Error View (Critical for security)
   if (error && error.includes("Session invalid")) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-        <div className="w-16 h-16 bg-error/10 rounded-full flex items-center justify-center mb-4">
-          <LockClosedIcon className="w-8 h-8 text-error" />
-        </div>
+        <LockClosedIcon className="w-16 h-16 text-error mb-4" />
         <h2 className="text-2xl font-bold">Access Denied</h2>
-        <p className="opacity-70 mt-2 max-w-md">
-          You switched wallets. Please return to the Overview page to verify your new identity.
-        </p>
+        <p className="opacity-70 mt-2 max-w-md">You switched wallets. Please re-login.</p>
         <Link href="/" className="btn btn-primary mt-6">
           Go to Overview
         </Link>
@@ -404,8 +378,6 @@ export default function FilesPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-8">
-      {/* ... (Rest of UI Rendering matches previous logic) ... */}
-      {/* Keeping UI rendering identical to the previously fixed version */}
       <div className="flex justify-between items-end border-b border-base-300 pb-4">
         <div>
           <h1 className="text-3xl font-bold">My Vault</h1>
@@ -443,7 +415,6 @@ export default function FilesPage() {
 
             <div className="collapse-title flex items-center gap-4 p-4 pr-12">
               <div className="p-3 bg-base-200 rounded-xl">{getFileIcon(file.mime_type)}</div>
-
               <div className="flex-grow min-w-0">
                 <h3 className="font-bold text-lg truncate pr-4">{file.filename || "Untitled File"}</h3>
                 <div className="flex gap-2 text-xs opacity-60 mt-1">
@@ -451,21 +422,18 @@ export default function FilesPage() {
                   <span>{new Date(file.created_at).toLocaleDateString()}</span>
                 </div>
               </div>
-
               <div className="hidden sm:flex items-center gap-2 z-10" onClick={e => e.stopPropagation()}>
                 <button
                   onClick={() => handleDecrypt(file)}
                   className="btn btn-sm btn-ghost gap-2 hover:bg-primary/10 hover:text-primary transition-colors"
                 >
-                  <ArrowDownTrayIcon className="w-4 h-4" />
-                  Decrypt
+                  <ArrowDownTrayIcon className="w-4 h-4" /> Decrypt
                 </button>
                 <button
                   onClick={() => openManageAccess(file)}
                   className="btn btn-sm btn-ghost gap-2 hover:bg-secondary/10 hover:text-secondary transition-colors"
                 >
-                  <UserGroupIcon className="w-4 h-4" />
-                  Access
+                  <UserGroupIcon className="w-4 h-4" /> Access
                 </button>
               </div>
             </div>
@@ -489,24 +457,43 @@ export default function FilesPage() {
 
                   <div className="flex items-center gap-2 text-sm mt-2">
                     <span className="font-semibold text-base-content/70 w-24">IPFS Link:</span>
-                    <Link
+                    <a
                       href={`${ipfsGatewayBase}/${file.cid}`}
                       target="_blank"
                       rel="noreferrer"
                       className="link link-primary text-xs truncate"
                     >
                       View Raw Encrypted Data
-                    </Link>
+                    </a>
                   </div>
                 </div>
 
-                <div className="sm:hidden flex flex-col gap-2 pt-2">
-                  <button onClick={() => handleDecrypt(file)} className="btn btn-primary btn-sm w-full">
-                    Decrypt & Download
-                  </button>
-                  <button onClick={() => openManageAccess(file)} className="btn btn-outline btn-sm w-full">
-                    Manage Access
-                  </button>
+                <div className="flex flex-col gap-2 pt-2 justify-between">
+                  {/* Mobile Actions */}
+                  <div className="sm:hidden flex flex-col gap-2">
+                    <button onClick={() => handleDecrypt(file)} className="btn btn-primary btn-sm w-full">
+                      Decrypt & Download
+                    </button>
+                    <button onClick={() => openManageAccess(file)} className="btn btn-outline btn-sm w-full">
+                      Manage Access
+                    </button>
+                  </div>
+
+                  {/* DELETE BUTTON  */}
+                  <div className="flex justify-end mt-4">
+                    <button
+                      onClick={() => handleDelete(file)}
+                      disabled={isDeleting === file.id}
+                      className="btn btn-sm btn-ghost text-error gap-2 hover:bg-error/10"
+                    >
+                      {isDeleting === file.id ? (
+                        <span className="loading loading-spinner loading-xs" />
+                      ) : (
+                        <TrashIcon className="w-4 h-4" />
+                      )}
+                      Delete File
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -514,14 +501,14 @@ export default function FilesPage() {
         ))}
       </div>
 
+      {/* Access Modal (Same as before) */}
       {accessFile && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
             <div className="p-6 border-b border-base-200 flex justify-between items-center bg-base-200/50 rounded-t-2xl">
               <div>
                 <h2 className="text-xl font-bold flex items-center gap-2">
-                  <KeyIcon className="w-5 h-5 text-secondary" />
-                  Manage Access
+                  <KeyIcon className="w-5 h-5 text-secondary" /> Manage Access
                 </h2>
                 <p className="text-xs opacity-60 font-mono mt-1 truncate max-w-[250px]">{accessFile.filename}</p>
               </div>
@@ -529,14 +516,12 @@ export default function FilesPage() {
                 ✕
               </button>
             </div>
-
             <div className="p-6 overflow-y-auto space-y-6">
               {accessLoading && (
                 <div className="flex justify-center">
                   <span className="loading loading-spinner" />
                 </div>
               )}
-
               {accessError && (
                 <div className="alert alert-error text-sm py-2 rounded-lg">
                   <span>{accessError}</span>
@@ -563,7 +548,6 @@ export default function FilesPage() {
                 <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
                   Users with access <span className="badge badge-sm">{accessRecipients.length}</span>
                 </h3>
-
                 {accessRecipients.length === 0 ? (
                   <div className="text-center py-8 opacity-50 border-2 border-dashed border-base-200 rounded-xl">
                     <UserGroupIcon className="w-8 h-8 mx-auto mb-1" />
