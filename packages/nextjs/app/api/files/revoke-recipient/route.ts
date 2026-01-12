@@ -1,7 +1,8 @@
 // packages/nextjs/app/api/files/revoke-recipient/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { AuditAction, logFileAction } from "~~/lib/auditLog";
 import { getRawToken, getSessionFromRequest } from "~~/lib/authSession";
-import { rateLimit } from "~~/lib/rateLimit";
+import { getClientIp, rateLimit } from "~~/lib/rateLimit";
 import { createSupabaseServerClient } from "~~/lib/supabaseServer";
 import { verifyOwner } from "~~/lib/verifyOnChainAccess";
 
@@ -65,6 +66,22 @@ export async function POST(req: NextRequest) {
     if (error) {
       console.error("WrappedKey delete error:", error);
       return NextResponse.json<ApiErr>({ ok: false, error: "Delete failed" }, { status: 500 });
+    }
+
+    if (!error) {
+      await logFileAction({
+        action: AuditAction.ACCESS_REVOKE,
+        fileHashHex,
+        actorDid: session.did,
+        actorAddr: session.walletAddr,
+        targetDid: recipientDid,
+        targetAddr: null, // Could include if available
+        metadata: {
+          deletedCount: count,
+        },
+        ipAddress: getClientIp(req),
+        success: true,
+      });
     }
 
     return NextResponse.json<ApiOk>({ ok: true, deleted: count ?? 0 });

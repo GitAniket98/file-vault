@@ -1,12 +1,12 @@
 // packages/nextjs/app/api/files/commit-upload/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { AuditAction, logFileAction } from "~~/lib/auditLog";
 import { getRawToken, getSessionFromRequest } from "~~/lib/authSession";
 import { pinataUnpinCid } from "~~/lib/ipfsServer";
 import { getClientIp, rateLimit } from "~~/lib/rateLimit";
 import { createSupabaseServerClient } from "~~/lib/supabaseServer";
 import { verifyFileExists, verifyOwner } from "~~/lib/verifyOnChainAccess";
 
-/** Utility: Formats hex strings for Postgres `bytea` insertion. */
 function toPgByteaLiteral(hex: string): string {
   const normalized = hex.startsWith("0x") ? hex.slice(2) : hex;
   if (!normalized) throw new Error("Empty hex string for bytea");
@@ -39,7 +39,7 @@ type Body = {
   filename?: string | null;
   pinProvider?: string | null;
   wrappedKeys?: WrappedKeyItem[];
-  blockchainTxHash?: string; // NEW: Optional tx hash from frontend
+  blockchainTxHash?: string;
 };
 
 type ApiOk = {
@@ -48,29 +48,20 @@ type ApiOk = {
   wrappedCount: number;
 };
 
-/**
- * POST /api/files/commit-upload
- *
- * @description
- * Finalizes a file upload AFTER blockchain confirmation.
- *
- * @security
- * - NEW: Verifies file exists on blockchain BEFORE database commit
- * - NEW: Verifies caller is the on-chain owner
- * - RLS Enabled: Inserts run as the authenticated user
- * - Atomic-ish: If DB write fails, we rollback the IPFS pin
- */
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  let fileHashHex = "";
+  let session: any = null;
+
   try {
     // 1. Rate Limit
-    const ip = getClientIp(req);
     const limitResult = await rateLimit(req, `commit-upload:${ip}`, 20, 60_000);
     if (!limitResult.ok && limitResult.response) {
       return limitResult.response;
     }
 
-    // 2. Auth Check (Session + Token)
-    const session = await getSessionFromRequest(req);
+    // 2. Auth Check
+    session = await getSessionFromRequest(req);
     const token = getRawToken(req);
 
     if (!session || !token) {
@@ -90,17 +81,9 @@ export async function POST(req: NextRequest) {
 
     if (!body) return NextResponse.json({ ok: false, error: "Missing body" }, { status: 400 });
 
-    const {
-      fileHashHex,
-      cid,
-      ivHex,
-      sizeBytes,
-      mimeType,
-      filename,
-      pinProvider,
-      wrappedKeys = [],
-      blockchainTxHash,
-    } = body;
+    const { cid, ivHex, sizeBytes, mimeType, filename, pinProvider, wrappedKeys = [], blockchainTxHash } = body;
+
+    fileHashHex = body.fileHashHex;
 
     if (!fileHashHex || !cid || !ivHex) {
       return NextResponse.json({ ok: false, error: "Missing required fields" }, { status: 400 });
@@ -109,20 +92,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Invalid hex format" }, { status: 400 });
     }
 
-    // Verify Blockchain State
-
+    // 4. Blockchain Verification
     console.log(`[commit-upload] Verifying file ${fileHashHex.slice(0, 10)}... on blockchain...`);
 
-    // Check if file exists on blockchain
     const existsOnChain = await verifyFileExists(fileHashHex);
 
     if (!existsOnChain) {
-      console.error(
-        `[commit-upload] ❌ SECURITY: File ${fileHashHex.slice(0, 10)}... does NOT exist on blockchain. ` +
-          `Rejecting database commit.`,
-      );
+      console.error(`[commit-upload] ❌ SECURITY: File ${fileHashHex.slice(0, 10)}... does NOT exist on blockchain.`);
 
-      // Rollback: Unpin IPFS since blockchain registration failed
+      // ⭐ Log failed verification
+      await logFileAction({
+        action: AuditAction.BLOCKCHAIN_VERIFY_FAILED,
+        fileHashHex,
+        actorDid: uploaderDid,
+        actorAddr: uploaderAddr,
+        metadata: { reason: "File not found on blockchain", cid },
+        ipAddress: ip,
+        success: false,
+        errorMessage: "File not found on blockchain",
+      });
+
       await pinataUnpinCid(cid);
 
       return NextResponse.json(
@@ -130,18 +119,29 @@ export async function POST(req: NextRequest) {
           ok: false,
           error: "File not found on blockchain. Ensure storeFileHash() succeeded before calling this endpoint.",
         },
-        { status: 409 }, // Conflict
+        { status: 409 },
       );
     }
 
-    // Verify ownership on blockchain
     const isOwner = await verifyOwner(fileHashHex, uploaderAddr);
 
     if (!isOwner) {
       console.error(
-        `[commit-upload] SECURITY: User ${uploaderAddr} attempted to commit file ${fileHashHex.slice(0, 10)}... ` +
+        `[commit-upload] ❌ SECURITY: User ${uploaderAddr} attempted to commit file ${fileHashHex.slice(0, 10)}... ` +
           `but is NOT the on-chain owner.`,
       );
+
+      // ⭐ Log failed ownership check
+      await logFileAction({
+        action: AuditAction.BLOCKCHAIN_VERIFY_FAILED,
+        fileHashHex,
+        actorDid: uploaderDid,
+        actorAddr: uploaderAddr,
+        metadata: { reason: "Not the on-chain owner" },
+        ipAddress: ip,
+        success: false,
+        errorMessage: "Not the on-chain owner",
+      });
 
       await pinataUnpinCid(cid);
 
@@ -156,9 +156,7 @@ export async function POST(req: NextRequest) {
 
     console.log(`[commit-upload] ✅ Blockchain verification passed for ${fileHashHex.slice(0, 10)}...`);
 
-    // ============================================
-    // Init Supabase in USER MODE (RLS Active)
-    // ============================================
+    // 5. Init Supabase
     const supabase = createSupabaseServerClient(token);
 
     const fileHashBytea = toPgByteaLiteral(fileHashHex);
@@ -167,17 +165,15 @@ export async function POST(req: NextRequest) {
     let fileRow: any | null = null;
     let wrappedCount = 0;
 
-    // ============================================
-    // Insert File Metadata
-    // ============================================
+    // 6. Insert File Metadata
     const { data: fileData, error: fileError } = await supabase
       .from("File")
       .insert({
         file_hash: fileHashBytea,
         cid,
         iv: ivBytea,
-        uploader_did: uploaderDid, // Must match JWT claim or RLS will block
-        uploader_addr: uploaderAddr, // Must match JWT claim or RLS will block
+        uploader_did: uploaderDid,
+        uploader_addr: uploaderAddr,
         size_bytes: sizeBytes ?? null,
         mime_type: mimeType ?? null,
         filename: filename ?? null,
@@ -190,24 +186,30 @@ export async function POST(req: NextRequest) {
 
     if (fileError) {
       console.error("[commit-upload] File insert error:", fileError);
-      // Compensating Action: Unpin IPFS
       await pinataUnpinCid(cid);
       return NextResponse.json({ ok: false, error: `File insert failed: ${fileError.message}` }, { status: 500 });
     }
 
     fileRow = fileData;
 
-    // ============================================
-    // Audit Log
-    // ============================================
-    await supabase.from("AuditLog").insert({
-      action: "FILE_UPLOAD",
-      payload_hash: fileHashBytea,
+    // ⭐ 7. Log successful file upload
+    await logFileAction({
+      action: AuditAction.FILE_UPLOAD,
+      fileHashHex,
+      actorDid: uploaderDid,
+      actorAddr: uploaderAddr,
+      metadata: {
+        cid,
+        filename,
+        mimeType,
+        sizeBytes,
+        blockchainTxHash,
+      },
+      ipAddress: ip,
+      success: true,
     });
 
-    // ============================================
-    // Insert Wrapped Keys (Access Control)
-    // ============================================
+    // 8. Insert Wrapped Keys
     if (wrappedKeys.length > 0) {
       const rows = wrappedKeys.map(item => ({
         file_hash: fileHashBytea,
@@ -222,7 +224,6 @@ export async function POST(req: NextRequest) {
 
       if (wrappedError) {
         console.error("[commit-upload] WrappedKey error:", wrappedError);
-        // Rollback: Delete file row + Unpin
         await supabase.from("File").delete().eq("file_hash", fileHashBytea);
         await pinataUnpinCid(cid);
         return NextResponse.json({ ok: false, error: "Failed to save keys. Upload aborted." }, { status: 500 });
@@ -230,9 +231,7 @@ export async function POST(req: NextRequest) {
       wrappedCount = wrappedData?.length ?? 0;
     }
 
-    // ============================================
-    // Sanitize & Return
-    // ============================================
+    // 9. Sanitize & Return
     const safeFile = fileRow
       ? {
           ...fileRow,
@@ -247,6 +246,20 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json<ApiOk>({ ok: true, file: safeFile, wrappedCount });
   } catch (e: any) {
+    // Log unexpected errors
+    if (fileHashHex && session) {
+      await logFileAction({
+        action: AuditAction.FILE_UPLOAD,
+        fileHashHex,
+        actorDid: session.did,
+        actorAddr: session.walletAddr,
+        metadata: { error: e?.message },
+        ipAddress: ip,
+        success: false,
+        errorMessage: e?.message || "Internal error",
+      });
+    }
+
     if (e instanceof Response) return e;
     console.error("[commit-upload] Critical error:", e);
     return NextResponse.json({ ok: false, error: e?.message || "Internal error" }, { status: 500 });

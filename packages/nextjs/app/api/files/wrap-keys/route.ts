@@ -1,7 +1,8 @@
 // packages/nextjs/app/api/files/wrap-keys/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { AuditAction, logFileAction } from "~~/lib/auditLog";
 import { getRawToken, getSessionFromRequest } from "~~/lib/authSession";
-import { rateLimit } from "~~/lib/rateLimit";
+import { getClientIp, rateLimit } from "~~/lib/rateLimit";
 import { createSupabaseServerClient } from "~~/lib/supabaseServer";
 import { verifyOwner } from "~~/lib/verifyOnChainAccess";
 
@@ -87,6 +88,26 @@ export async function POST(req: NextRequest) {
       `[wrap-keys] ✅ SUCCESS: User ${session.walletAddr} granted access to ${rows.length} recipients ` +
         `for file ${fileHashHex.slice(0, 10)}...`,
     );
+
+    if (!error && data) {
+      // Log each recipient separately
+      for (const recipient of body.wrappedKeys) {
+        await logFileAction({
+          action: AuditAction.ACCESS_GRANT,
+          fileHashHex,
+          actorDid: session.did,
+          actorAddr: session.walletAddr,
+          targetDid: recipient.recipientDid,
+          targetAddr: null, // Could resolve from recipientDid if needed
+          metadata: {
+            algorithm: recipient.algorithm,
+            keyVersion: recipient.keyVersion,
+          },
+          ipAddress: getClientIp(req),
+          success: true,
+        });
+      }
+    }
 
     return NextResponse.json({ ok: true, rows: data });
   } catch (e: any) {

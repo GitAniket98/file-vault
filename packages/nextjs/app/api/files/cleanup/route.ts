@@ -1,8 +1,9 @@
 // packages/nextjs/app/api/files/cleanup/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { AuditAction, logFileAction } from "~~/lib/auditLog";
 import { getRawToken, getSessionFromRequest } from "~~/lib/authSession";
 import { pinataUnpinCid } from "~~/lib/ipfsServer";
-import { rateLimit } from "~~/lib/rateLimit";
+import { getClientIp, rateLimit } from "~~/lib/rateLimit";
 import { createSupabaseServerClient } from "~~/lib/supabaseServer";
 import { verifyOwner } from "~~/lib/verifyOnChainAccess";
 
@@ -83,6 +84,19 @@ export async function POST(req: NextRequest) {
     await supabase.from("WrappedKey").delete().eq("file_hash", fileHashBytea);
     await supabase.from("File").delete().eq("id", file.id);
     await pinataUnpinCid(cid);
+
+    await logFileAction({
+      action: AuditAction.FILE_DELETE,
+      fileHashHex,
+      actorDid: session.did,
+      actorAddr: session.walletAddr,
+      metadata: {
+        cid: cid,
+        reason: "User cleanup",
+      },
+      ipAddress: getClientIp(req),
+      success: true,
+    });
 
     return NextResponse.json({ ok: true, cleaned: true });
   } catch (e: any) {

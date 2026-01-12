@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
     const supabase = createSupabaseServerClient(token);
 
-    // 1. Fetch potential keys from DB
+    // 1. Fetch potential keys from DB with uploader info
     const { data, error } = await supabase
       .from("WrappedKey")
       .select(
@@ -75,7 +75,10 @@ export async function POST(req: NextRequest) {
 
       // Verify Access
       const hasAccess = await verifyAccess(fileHashHex, session.walletAddr);
-      if (!hasAccess) return null; // Filter out if access revoked on chain
+      if (!hasAccess) {
+        console.warn(`[for-recipient] Access denied by blockchain for file ${fileHashHex.slice(0, 10)}...`);
+        return null; // Filter out if access revoked on chain
+      }
 
       const file = row.File || {};
 
@@ -100,6 +103,10 @@ export async function POST(req: NextRequest) {
     const results = await Promise.all(promises);
 
     const rows = results.filter((r): r is SharedFileRow => r !== null);
+
+    console.log(
+      `[for-recipient] Returned ${rows.length}/${data?.length ?? 0} files ` + `(filtered by blockchain authorization)`,
+    );
 
     return NextResponse.json<ApiOk>({ ok: true, rows });
   } catch (e: any) {

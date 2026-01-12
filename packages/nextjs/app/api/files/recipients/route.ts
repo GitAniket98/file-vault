@@ -1,5 +1,6 @@
 // packages/nextjs/app/api/files/recipients/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { AuditAction, logFileAction } from "~~/lib/auditLog";
 import { getRawToken, getSessionFromRequest } from "~~/lib/authSession";
 import { getClientIp, rateLimit } from "~~/lib/rateLimit";
 import { createSupabaseServerClient } from "~~/lib/supabaseServer";
@@ -64,6 +65,20 @@ export async function GET(req: NextRequest) {
       .from("WrappedKey")
       .select("recipient_did, algorithm, key_version, created_at")
       .eq("file_hash", fileHashBytea);
+
+    if (!wrappedErr) {
+      await logFileAction({
+        action: AuditAction.ACCESS_VIEW_RECIPIENTS,
+        fileHashHex,
+        actorDid: session.did,
+        actorAddr: session.walletAddr,
+        metadata: {
+          recipientCount: wrapped?.length || 0,
+        },
+        ipAddress: getClientIp(req),
+        success: true,
+      });
+    }
 
     if (wrappedErr) {
       console.error("WrappedKey query error:", wrappedErr);
