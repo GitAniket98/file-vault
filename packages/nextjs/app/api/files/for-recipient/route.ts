@@ -3,9 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRawToken, getSessionFromRequest } from "~~/lib/authSession";
 import { getClientIp, rateLimit } from "~~/lib/rateLimit";
 import { createSupabaseServerClient } from "~~/lib/supabaseServer";
+import { verifyAccess } from "~~/lib/verifyOnChainAccess";
 
 type SharedFileRow = {
-  fileHashHex: string | null;
+  fileHashHex: string;
   ivHex: string | null;
   recipientDid: string;
   algorithm: string;
@@ -16,6 +17,7 @@ type SharedFileRow = {
   mimeType: string | null;
   filename: string | null;
   sizeBytes: number | null;
+  uploaderAddr: string | null;
   createdAt: string;
 };
 
@@ -31,7 +33,6 @@ function toHex(bytea: string | null): string | null {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Auth Check
     const session = await getSessionFromRequest(req);
     const token = getRawToken(req);
 
@@ -40,27 +41,22 @@ export async function POST(req: NextRequest) {
     }
 
     const did = session.did;
-
-    // 2. Rate Limit
     const ip = getClientIp(req);
     const rl = await rateLimit(req, `files-for-recipient:${did}:${ip}`, 30, 60_000);
     if (!rl || !rl.ok) {
       return NextResponse.json({ ok: false, error: "Too many requests" }, { status: 429 });
     }
 
-    // 3. Init Supabase (User Mode)
     const supabase = createSupabaseServerClient(token);
 
-    // 4. Query
-    // RLS Policy on WrappedKey: "recipient_did = current_user_did"
-    // This ensures I can only see keys meant for ME.
+    // 1. Fetch potential keys from DB
     const { data, error } = await supabase
       .from("WrappedKey")
       .select(
         `
-                file_hash, recipient_did, algorithm, key_version, wrapped_key, ephemeral_pub,
-                File:file_hash ( cid, iv, mime_type, filename, size_bytes, created_at )
-            `,
+          file_hash, recipient_did, algorithm, key_version, wrapped_key, ephemeral_pub,
+          File:file_hash ( cid, iv, mime_type, filename, size_bytes, created_at, uploader_addr )
+        `,
       )
       .eq("recipient_did", did)
       .order("created_at", { ascending: false });
@@ -70,11 +66,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Query failed" }, { status: 500 });
     }
 
-    // 5. Transformation
-    const rows: SharedFileRow[] = (data ?? []).map((row: any) => {
+    // 2. ON-CHAIN FILTERING (Batch Verify)
+    const promises = (data ?? []).map(async (row: any) => {
+      const fileHashHex = toHex(row.file_hash ?? null);
+
+      // If no hash, skip (returns null)
+      if (!fileHashHex) return null;
+
+      // Verify Access
+      const hasAccess = await verifyAccess(fileHashHex, session.walletAddr);
+      if (!hasAccess) return null; // Filter out if access revoked on chain
+
       const file = row.File || {};
+
+      // Construct strictly typed object
       return {
-        fileHashHex: toHex(row.file_hash ?? null),
+        fileHashHex, // This is definitely string here
         ivHex: toHex(file.iv ?? null),
         recipientDid: row.recipient_did,
         algorithm: row.algorithm,
@@ -85,9 +92,14 @@ export async function POST(req: NextRequest) {
         mimeType: file.mime_type,
         filename: file.filename,
         sizeBytes: file.size_bytes,
+        uploaderAddr: file.uploader_addr,
         createdAt: file.created_at,
       };
     });
+
+    const results = await Promise.all(promises);
+
+    const rows = results.filter((r): r is SharedFileRow => r !== null);
 
     return NextResponse.json<ApiOk>({ ok: true, rows });
   } catch (e: any) {

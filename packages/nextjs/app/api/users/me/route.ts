@@ -10,7 +10,7 @@ type ApiOk = {
   registered: boolean;
   user?: {
     did: string;
-    walletAddr: string; // 👈 Updated type to match frontend expectation
+    walletAddr: string;
     enc_alg: string | null;
   } | null;
 };
@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
       registered: true,
       user: {
         did: user.did,
-        //CRITICAL FIX: Map database 'wallet_addr' to frontend 'walletAddr'
+        // Map database 'wallet_addr' to frontend 'walletAddr'
         walletAddr: user.wallet_addr,
         enc_alg: user.enc_alg,
       },

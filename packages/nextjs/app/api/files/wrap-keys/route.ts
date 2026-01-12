@@ -3,10 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRawToken, getSessionFromRequest } from "~~/lib/authSession";
 import { rateLimit } from "~~/lib/rateLimit";
 import { createSupabaseServerClient } from "~~/lib/supabaseServer";
+import { verifyOwner } from "~~/lib/verifyOnChainAccess";
 
-/**
- * Helper: Normalizes hex strings for Postgres `bytea` compatibility.
- */
 const toPg = (hex: string) => "\\x" + hex.replace(/^0x/, "").toLowerCase();
 
 type WrappedKeyItem = {
@@ -19,19 +17,16 @@ type WrappedKeyItem = {
 
 /**
  * POST /api/files/wrap-keys
- * * @description
- * Adds new recipients (access grants) to an existing file.
- * * @security
- * - RLS Enabled: Inserts run as the authenticated user.
- * - IDOR Protection: Checks ownership of the file before allowing key insertion.
+ * Grants access to recipients by storing wrapped keys
+ *
+ * @security
+ * - Verifies caller is on-chain owner before allowing key insertion
  */
 export async function POST(req: NextRequest) {
   try {
-    // 1. Rate Limiting
     const limited = await rateLimit(req, "wrap-keys", 20, 60_000);
     if (!limited.ok && limited.response) return limited.response;
 
-    // 2. Auth Check
     const session = await getSessionFromRequest(req);
     const token = getRawToken(req);
 
@@ -39,34 +34,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // 3. Input Validation
     const body = await req.json().catch(() => null);
     if (!body?.fileHashHex || !Array.isArray(body.wrappedKeys)) {
       return NextResponse.json({ ok: false, error: "Invalid payload" }, { status: 400 });
     }
 
-    // 4. Init Supabase (User Mode)
+    const fileHashHex = body.fileHashHex;
+
+    if (!/^0x[0-9a-fA-F]{64}$/.test(fileHashHex)) {
+      return NextResponse.json({ ok: false, error: "Invalid fileHashHex format" }, { status: 400 });
+    }
+
+    // Verify ownership on blockchain
+    const isOwner = await verifyOwner(fileHashHex, session.walletAddr);
+
+    if (!isOwner) {
+      console.error(
+        `[wrap-keys] ❌ SECURITY: User ${session.walletAddr} attempted to wrap keys for file ${fileHashHex.slice(0, 10)}... ` +
+          `but is NOT the on-chain owner.`,
+      );
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "You are not the owner of this file on the blockchain",
+        },
+        { status: 403 },
+      );
+    }
+
     const supabase = createSupabaseServerClient(token);
-    const fileHashBytea = toPg(body.fileHashHex);
+    const fileHashBytea = toPg(fileHashHex);
 
-    // 5. Authorization Check (IDOR Prevention)
-    // Verify ownership. RLS policy on "WrappedKey" insert should also enforce this via a check on the parent File table,
-    // but this explicit check gives a cleaner 403 error.
-    const { data: file } = await supabase
-      .from("File")
-      .select("uploader_addr")
-      .eq("file_hash", fileHashBytea)
-      .maybeSingle();
-
-    if (!file) {
-      return NextResponse.json({ ok: false, error: "File not found" }, { status: 404 });
-    }
-
-    if (file.uploader_addr.toLowerCase() !== session.walletAddr.toLowerCase()) {
-      return NextResponse.json({ ok: false, error: "You are not the uploader of this file" }, { status: 403 });
-    }
-
-    // 6. Data Transformation
+    // Data transformation
     const rows = body.wrappedKeys.map((k: WrappedKeyItem) => ({
       file_hash: fileHashBytea,
       recipient_did: k.recipientDid,
@@ -76,13 +75,18 @@ export async function POST(req: NextRequest) {
       ephemeral_pub: toPg(k.ephemeralPubHex),
     }));
 
-    // 7. Persistence
+    // Insert wrapped keys
     const { data, error } = await supabase.from("WrappedKey").insert(rows).select();
 
     if (error) {
       console.error("WrappedKey insert failed:", error);
       return NextResponse.json({ ok: false, error: `Failed to grant access: ${error.message}` }, { status: 500 });
     }
+
+    console.log(
+      `[wrap-keys] ✅ SUCCESS: User ${session.walletAddr} granted access to ${rows.length} recipients ` +
+        `for file ${fileHashHex.slice(0, 10)}...`,
+    );
 
     return NextResponse.json({ ok: true, rows: data });
   } catch (e: any) {

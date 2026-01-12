@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRawToken, getSessionFromRequest } from "~~/lib/authSession";
 import { getClientIp, rateLimit } from "~~/lib/rateLimit";
 import { createSupabaseServerClient } from "~~/lib/supabaseServer";
+import { verifyOwner } from "~~/lib/verifyOnChainAccess";
 
 type FileRow = {
   id: string;
@@ -25,6 +26,12 @@ type ApiOk = {
   files: FileRow[];
 };
 
+// ⭐ ADD THIS HELPER
+function toHex(bytea: string | null): string | null {
+  if (!bytea) return null;
+  return bytea.startsWith("\\x") ? "0x" + bytea.slice(2) : bytea;
+}
+
 export async function GET(req: NextRequest) {
   try {
     // 1. Auth Check
@@ -35,7 +42,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const walletAddr = session.sub;
+    const walletAddr = session.walletAddr;
 
     // 2. Rate Limit
     const ip = getClientIp(req);
@@ -47,9 +54,7 @@ export async function GET(req: NextRequest) {
     // 3. Init Supabase (User Mode)
     const supabase = createSupabaseServerClient(token);
 
-    // 4. Query
-    // RLS automatically filters this query to "My Files Only".
-    // The explicit .eq() is defense-in-depth.
+    // 4. Query Database
     const { data, error } = await supabase
       .from("File")
       .select(
@@ -63,10 +68,41 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Database query failed" }, { status: 500 });
     }
 
+    // ⭐⭐⭐ ADD THIS SECTION - Blockchain Verification ⭐⭐⭐
+    const verifiedFiles: FileRow[] = [];
+
+    for (const file of data ?? []) {
+      const fileHashHex = toHex(file.file_hash);
+
+      if (!fileHashHex) {
+        console.warn("[by-uploader] Skipping file with null file_hash");
+        continue;
+      }
+
+      // 🔐 SECURITY: Verify ownership on blockchain
+      const isOwner = await verifyOwner(fileHashHex, walletAddr);
+
+      if (!isOwner) {
+        console.warn(
+          `[by-uploader] ⚠️ File ${fileHashHex.slice(0, 10)}... in database ` +
+            `but NOT owned by ${walletAddr} on blockchain. Filtering out.`,
+        );
+        continue; // Skip files not owned on blockchain
+      }
+
+      verifiedFiles.push(file as FileRow);
+    }
+
+    console.log(
+      `[by-uploader] ✅ Returned ${verifiedFiles.length}/${data?.length ?? 0} files ` +
+        `(filtered by blockchain ownership)`,
+    );
+
     return NextResponse.json<ApiOk>({
       ok: true,
-      files: (data ?? []) as FileRow[],
+      files: verifiedFiles, // ⭐ Return verified files only
     });
+    // ⭐⭐⭐ END OF NEW SECTION ⭐⭐⭐
   } catch (e: any) {
     if (e instanceof Response) return e;
     return NextResponse.json({ ok: false, error: "Internal error" }, { status: 500 });

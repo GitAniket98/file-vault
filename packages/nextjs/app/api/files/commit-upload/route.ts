@@ -4,6 +4,7 @@ import { getRawToken, getSessionFromRequest } from "~~/lib/authSession";
 import { pinataUnpinCid } from "~~/lib/ipfsServer";
 import { getClientIp, rateLimit } from "~~/lib/rateLimit";
 import { createSupabaseServerClient } from "~~/lib/supabaseServer";
+import { verifyFileExists, verifyOwner } from "~~/lib/verifyOnChainAccess";
 
 /** Utility: Formats hex strings for Postgres `bytea` insertion. */
 function toPgByteaLiteral(hex: string): string {
@@ -38,6 +39,7 @@ type Body = {
   filename?: string | null;
   pinProvider?: string | null;
   wrappedKeys?: WrappedKeyItem[];
+  blockchainTxHash?: string; // NEW: Optional tx hash from frontend
 };
 
 type ApiOk = {
@@ -48,11 +50,15 @@ type ApiOk = {
 
 /**
  * POST /api/files/commit-upload
- * * @description
- * Finalizes a file upload.
- * * @security
- * - RLS Enabled: Inserts run as the authenticated user.
- * - Atomic-ish: If DB write fails, we rollback the IPFS pin.
+ *
+ * @description
+ * Finalizes a file upload AFTER blockchain confirmation.
+ *
+ * @security
+ * - NEW: Verifies file exists on blockchain BEFORE database commit
+ * - NEW: Verifies caller is the on-chain owner
+ * - RLS Enabled: Inserts run as the authenticated user
+ * - Atomic-ish: If DB write fails, we rollback the IPFS pin
  */
 export async function POST(req: NextRequest) {
   try {
@@ -84,7 +90,17 @@ export async function POST(req: NextRequest) {
 
     if (!body) return NextResponse.json({ ok: false, error: "Missing body" }, { status: 400 });
 
-    const { fileHashHex, cid, ivHex, sizeBytes, mimeType, filename, pinProvider, wrappedKeys = [] } = body;
+    const {
+      fileHashHex,
+      cid,
+      ivHex,
+      sizeBytes,
+      mimeType,
+      filename,
+      pinProvider,
+      wrappedKeys = [],
+      blockchainTxHash,
+    } = body;
 
     if (!fileHashHex || !cid || !ivHex) {
       return NextResponse.json({ ok: false, error: "Missing required fields" }, { status: 400 });
@@ -93,7 +109,56 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Invalid hex format" }, { status: 400 });
     }
 
-    // 4. Init Supabase in USER MODE (RLS Active)
+    // Verify Blockchain State
+
+    console.log(`[commit-upload] Verifying file ${fileHashHex.slice(0, 10)}... on blockchain...`);
+
+    // Check if file exists on blockchain
+    const existsOnChain = await verifyFileExists(fileHashHex);
+
+    if (!existsOnChain) {
+      console.error(
+        `[commit-upload] ❌ SECURITY: File ${fileHashHex.slice(0, 10)}... does NOT exist on blockchain. ` +
+          `Rejecting database commit.`,
+      );
+
+      // Rollback: Unpin IPFS since blockchain registration failed
+      await pinataUnpinCid(cid);
+
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "File not found on blockchain. Ensure storeFileHash() succeeded before calling this endpoint.",
+        },
+        { status: 409 }, // Conflict
+      );
+    }
+
+    // Verify ownership on blockchain
+    const isOwner = await verifyOwner(fileHashHex, uploaderAddr);
+
+    if (!isOwner) {
+      console.error(
+        `[commit-upload] SECURITY: User ${uploaderAddr} attempted to commit file ${fileHashHex.slice(0, 10)}... ` +
+          `but is NOT the on-chain owner.`,
+      );
+
+      await pinataUnpinCid(cid);
+
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "You are not the owner of this file on the blockchain",
+        },
+        { status: 403 },
+      );
+    }
+
+    console.log(`[commit-upload] ✅ Blockchain verification passed for ${fileHashHex.slice(0, 10)}...`);
+
+    // ============================================
+    // Init Supabase in USER MODE (RLS Active)
+    // ============================================
     const supabase = createSupabaseServerClient(token);
 
     const fileHashBytea = toPgByteaLiteral(fileHashHex);
@@ -102,7 +167,9 @@ export async function POST(req: NextRequest) {
     let fileRow: any | null = null;
     let wrappedCount = 0;
 
-    // 5. Insert File Metadata
+    // ============================================
+    // Insert File Metadata
+    // ============================================
     const { data: fileData, error: fileError } = await supabase
       .from("File")
       .insert({
@@ -130,13 +197,17 @@ export async function POST(req: NextRequest) {
 
     fileRow = fileData;
 
-    // 6. Audit Log (Best Effort)
+    // ============================================
+    // Audit Log
+    // ============================================
     await supabase.from("AuditLog").insert({
       action: "FILE_UPLOAD",
       payload_hash: fileHashBytea,
     });
 
-    // 7. Insert Wrapped Keys (Access Control)
+    // ============================================
+    // Insert Wrapped Keys (Access Control)
+    // ============================================
     if (wrappedKeys.length > 0) {
       const rows = wrappedKeys.map(item => ({
         file_hash: fileHashBytea,
@@ -159,13 +230,20 @@ export async function POST(req: NextRequest) {
       wrappedCount = wrappedData?.length ?? 0;
     }
 
-    // 8. Sanitize & Return
+    // ============================================
+    // Sanitize & Return
+    // ============================================
     const safeFile = fileRow
       ? {
           ...fileRow,
           size_bytes: fileRow.size_bytes ? fileRow.size_bytes.toString() : null,
         }
       : null;
+
+    console.log(
+      `[commit-upload] ✅ SUCCESS: File ${fileHashHex.slice(0, 10)}... committed to database. ` +
+        `Owner: ${uploaderAddr}, Wrapped keys: ${wrappedCount}`,
+    );
 
     return NextResponse.json<ApiOk>({ ok: true, file: safeFile, wrappedCount });
   } catch (e: any) {
