@@ -1,4 +1,10 @@
+// Sources flattened with hardhat v2.28.1 https://hardhat.org
+
 // SPDX-License-Identifier: MIT
+
+// File contracts/fileVault.sol
+
+// Original license: SPDX_License_Identifier: MIT
 pragma solidity ^0.8.20;
 
 /// @title FileVault - On-chain access control for encrypted off-chain storage
