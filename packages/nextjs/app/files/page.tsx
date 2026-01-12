@@ -1,3 +1,4 @@
+// /packages/nextjs/app/files/page.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -6,6 +7,7 @@ import { useAccount } from "wagmi";
 import {
   ArrowDownTrayIcon,
   CheckCircleIcon,
+  ClockIcon,
   DocumentIcon,
   KeyIcon,
   LockClosedIcon,
@@ -14,12 +16,33 @@ import {
   TrashIcon,
   UserGroupIcon,
 } from "@heroicons/react/24/outline";
+import AuditLogModal from "~~/components/AuditLogModal";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { hexToUint8 } from "~~/lib/bytes";
 import { loadDeviceKey } from "~~/lib/deviceKeys";
 import { type RecipientUser, wrapAesKeyForRecipients } from "~~/lib/wrapKeys";
 import { aesDecryptToBlob } from "~~/utils/crypto";
 import { notification } from "~~/utils/scaffold-eth";
+
+// /packages/nextjs/app/files/page.tsx
+
+// /packages/nextjs/app/files/page.tsx
+
+// /packages/nextjs/app/files/page.tsx
+
+// /packages/nextjs/app/files/page.tsx
+
+// /packages/nextjs/app/files/page.tsx
+
+// /packages/nextjs/app/files/page.tsx
+
+// /packages/nextjs/app/files/page.tsx
+
+// /packages/nextjs/app/files/page.tsx
+
+// /packages/nextjs/app/files/page.tsx
+
+// /packages/nextjs/app/files/page.tsx
 
 // --- Types ---
 type FileRow = {
@@ -113,6 +136,11 @@ export default function FilesPage() {
   const [addrToGrant, setAddrToGrant] = useState("");
   const [grantBusy, setGrantBusy] = useState(false);
   const [revokeBusyId, setRevokeBusyId] = useState<string | null>(null);
+
+  // Audit Log State
+  const [auditModalOpen, setAuditModalOpen] = useState(false);
+  const [selectedFileHash, setSelectedFileHash] = useState("");
+  const [selectedFilename, setSelectedFilename] = useState("");
 
   const ipfsGatewayBase = "https://gateway.pinata.cloud/ipfs";
 
@@ -435,6 +463,17 @@ export default function FilesPage() {
                 >
                   <UserGroupIcon className="w-4 h-4" /> Access
                 </button>
+                <button
+                  onClick={() => {
+                    setSelectedFileHash(file.file_hash);
+                    setSelectedFilename(file.filename || "Untitled");
+                    setAuditModalOpen(true);
+                  }}
+                  className="btn btn-ghost btn-sm gap-2"
+                >
+                  <ClockIcon className="w-4 h-4" />
+                  View History
+                </button>
               </div>
             </div>
 
@@ -477,6 +516,16 @@ export default function FilesPage() {
                     <button onClick={() => openManageAccess(file)} className="btn btn-outline btn-sm w-full">
                       Manage Access
                     </button>
+                    <button
+                      onClick={() => {
+                        setSelectedFileHash(file.file_hash);
+                        setSelectedFilename(file.filename || "Untitled");
+                        setAuditModalOpen(true);
+                      }}
+                      className="btn btn-ghost btn-sm w-full gap-2 border border-base-300"
+                    >
+                      <ClockIcon className="w-4 h-4" /> View History
+                    </button>
                   </div>
 
                   {/* DELETE BUTTON  */}
@@ -501,7 +550,7 @@ export default function FilesPage() {
         ))}
       </div>
 
-      {/* Access Modal (Same as before) */}
+      {/* Access Modal  */}
       {accessFile && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
@@ -584,6 +633,14 @@ export default function FilesPage() {
           </div>
         </div>
       )}
+
+      {/* Audit Log Modal */}
+      <AuditLogModal
+        isOpen={auditModalOpen}
+        onClose={() => setAuditModalOpen(false)}
+        fileHashHex={selectedFileHash}
+        filename={selectedFilename}
+      />
     </div>
   );
 }

@@ -81,7 +81,7 @@ export default function FilesSharedWithMePage() {
         throw new Error("Wallet mismatch. Please login via Overview.");
       }
 
-      // 2. Fetch Data
+      // 2. Fetch Data (Files shared with MY DID - blockchain verified)
       const res = await fetch("/api/files/for-recipient", {
         method: "POST",
       });
@@ -130,6 +130,18 @@ export default function FilesSharedWithMePage() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+
+      // 4. Log decrypt action (don't wait for response)
+      fetch("/api/files/log-decrypt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileHashHex: row.fileHashHex,
+          filename: row.filename,
+          mimeType: row.mimeType,
+          sizeBytes: row.sizeBytes,
+        }),
+      }).catch(console.error);
 
       notification.success("File decrypted & downloaded");
     } catch (e: any) {
@@ -207,7 +219,7 @@ export default function FilesSharedWithMePage() {
             <p className="text-sm opacity-60 max-w-sm">
               When someone securely shares a file with your wallet address, it will appear here.
             </p>
-            <p className="text-xs opacity-40 mt-2">✅ All files are verified against blockchain access control</p>
+            <p className="text-xs opacity-40 mt-2">All files are verified against blockchain access control</p>
           </div>
         </div>
       )}
