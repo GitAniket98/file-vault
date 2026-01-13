@@ -1,6 +1,53 @@
 {
-  "address": "0x3e8f4A3B4C6895b05F6886D5ab9B1E47295CF1Bb",
+  "address": "0xD59b3f13896F9a420bcF5BE1fF3601454b2665BE",
   "abi": [
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "EnforcedPause",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ExpectedPause",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidInitialization",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotInitializing",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnableInvalidOwner",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "OwnableUnauthorizedAccount",
+      "type": "error"
+    },
     {
       "anonymous": false,
       "inputs": [
@@ -68,6 +115,31 @@
           "type": "bytes32"
         },
         {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "FileOwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "fileHash",
+          "type": "bytes32"
+        },
+        {
           "indexed": false,
           "internalType": "string",
           "name": "newCid",
@@ -118,11 +190,18 @@
       "anonymous": false,
       "inputs": [
         {
-          "indexed": true,
-          "internalType": "bytes32",
-          "name": "fileHash",
-          "type": "bytes32"
-        },
+          "indexed": false,
+          "internalType": "uint64",
+          "name": "version",
+          "type": "uint64"
+        }
+      ],
+      "name": "Initialized",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
         {
           "indexed": true,
           "internalType": "address",
@@ -137,6 +216,32 @@
         }
       ],
       "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "Paused",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "Unpaused",
       "type": "event"
     },
     {
@@ -278,6 +383,13 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "initialize",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "bytes32",
@@ -299,6 +411,46 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "pause",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "paused",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -355,7 +507,27 @@
           "type": "address"
         }
       ],
+      "name": "transferFileOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
       "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "unpause",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -379,251 +551,6 @@
       "type": "function"
     }
   ],
-  "transactionHash": "0x13150a6441edf913e7dbbc0fe71d50b76020d63e8699f755fe5c4ce32a029a49",
-  "receipt": {
-    "to": null,
-    "from": "0x009CEC7B2EE24aB63442C5aA3193FC7acBFde051",
-    "contractAddress": "0x3e8f4A3B4C6895b05F6886D5ab9B1E47295CF1Bb",
-    "transactionIndex": 1,
-    "gasUsed": "1154455",
-    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-    "blockHash": "0xa53b8a2f77e520bea2a519d3d445cbc58fc83b1d7478e1406b0bcd26214ef7d6",
-    "transactionHash": "0x13150a6441edf913e7dbbc0fe71d50b76020d63e8699f755fe5c4ce32a029a49",
-    "logs": [],
-    "blockNumber": 38155639,
-    "cumulativeGasUsed": "1200637",
-    "status": 1,
-    "byzantium": true
-  },
-  "args": [],
-  "numDeployments": 2,
-  "solcInputHash": "98153a3dee025a041aa77849c9d04250",
-  "metadata": "{\"compiler\":{\"version\":\"0.8.20+commit.a1b79de6\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"}],\"name\":\"AccessGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"}],\"name\":\"AccessRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"uploader\",\"type\":\"address\"}],\"name\":\"FileDeleted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"newCid\",\"type\":\"string\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"uploader\",\"type\":\"address\"}],\"name\":\"FileUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"cid\",\"type\":\"string\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"uploader\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"allowedUsers\",\"type\":\"address[]\"}],\"name\":\"FileUploaded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"MAX_ALLOWED_USERS\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"}],\"name\":\"canAccess\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"}],\"name\":\"deleteFile\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"}],\"name\":\"fileExists\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"}],\"name\":\"getCid\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"}],\"name\":\"getUploader\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"}],\"name\":\"grantAccess\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"},{\"internalType\":\"address[]\",\"name\":\"users\",\"type\":\"address[]\"}],\"name\":\"grantAccessBatch\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"}],\"name\":\"isAuthorized\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"}],\"name\":\"revokeAccess\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"},{\"internalType\":\"string\",\"name\":\"cid\",\"type\":\"string\"},{\"internalType\":\"address[]\",\"name\":\"allowedUsers\",\"type\":\"address[]\"}],\"name\":\"storeFileHash\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"fileHash\",\"type\":\"bytes32\"},{\"internalType\":\"string\",\"name\":\"newCid\",\"type\":\"string\"}],\"name\":\"updateCid\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"events\":{\"FileUploaded(bytes32,string,address,address[])\":{\"details\":\"Events for frontend/backends to track changes\"}},\"kind\":\"dev\",\"methods\":{\"canAccess(bytes32)\":{\"params\":{\"fileHash\":\"SHA-256 hash of the file\"},\"returns\":{\"_0\":\"bool True if authorized, false otherwise\"}},\"deleteFile(bytes32)\":{\"params\":{\"fileHash\":\"SHA-256 hash of the file\"}},\"fileExists(bytes32)\":{\"params\":{\"fileHash\":\"SHA-256 hash of the file\"},\"returns\":{\"_0\":\"bool True if file exists, false otherwise\"}},\"getCid(bytes32)\":{\"params\":{\"fileHash\":\"SHA-256 hash of the file\"},\"returns\":{\"_0\":\"string IPFS CID\"}},\"getUploader(bytes32)\":{\"params\":{\"fileHash\":\"SHA-256 hash of the file\"},\"returns\":{\"_0\":\"address Address of the uploader\"}},\"grantAccess(bytes32,address)\":{\"params\":{\"fileHash\":\"SHA-256 hash of the file\",\"user\":\"Address to grant access to\"}},\"grantAccessBatch(bytes32,address[])\":{\"params\":{\"fileHash\":\"SHA-256 hash of the file\",\"users\":\"Array of addresses to grant access to\"}},\"isAuthorized(bytes32,address)\":{\"params\":{\"fileHash\":\"SHA-256 hash of the file\",\"user\":\"Address to check\"},\"returns\":{\"_0\":\"bool True if authorized, false otherwise\"}},\"revokeAccess(bytes32,address)\":{\"params\":{\"fileHash\":\"SHA-256 hash of the file\",\"user\":\"Address to revoke access from\"}},\"storeFileHash(bytes32,string,address[])\":{\"params\":{\"allowedUsers\":\"List of addresses initially granted access\",\"cid\":\"IPFS CID of the encrypted file\",\"fileHash\":\"SHA-256 hash of the encrypted file\"}},\"transferOwnership(bytes32,address)\":{\"params\":{\"fileHash\":\"SHA-256 hash of the file\",\"newOwner\":\"Address of the new owner\"}},\"updateCid(bytes32,string)\":{\"params\":{\"fileHash\":\"SHA-256 hash of the file\",\"newCid\":\"New IPFS CID\"}}},\"title\":\"FileVault - On-chain access control for encrypted off-chain storage\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"canAccess(bytes32)\":{\"notice\":\"Check if caller is authorized to access a file\"},\"deleteFile(bytes32)\":{\"notice\":\"Delete a file reference and clear all access (only uploader can delete)\"},\"fileExists(bytes32)\":{\"notice\":\"Check if a file exists\"},\"getCid(bytes32)\":{\"notice\":\"Get the CID of a file (only authorized users can access)\"},\"getUploader(bytes32)\":{\"notice\":\"Get the uploader of a file\"},\"grantAccess(bytes32,address)\":{\"notice\":\"Grant access to a user (only uploader can grant)\"},\"grantAccessBatch(bytes32,address[])\":{\"notice\":\"Grant access to multiple users (only uploader can grant)\"},\"isAuthorized(bytes32,address)\":{\"notice\":\"Check if a user is authorized to access a file\"},\"revokeAccess(bytes32,address)\":{\"notice\":\"Revoke access from a user (only uploader can revoke)\"},\"storeFileHash(bytes32,string,address[])\":{\"notice\":\"Upload a new file reference (CID + hash) and set initial access list\"},\"transferOwnership(bytes32,address)\":{\"notice\":\"Transfer ownership of a file to a new address (only uploader can transfer)\"},\"updateCid(bytes32,string)\":{\"notice\":\"Update the CID of an existing file (only uploader can update)\"}},\"notice\":\"Stores encrypted file references (hash + CID) and manages access with security improvements\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/fileVault.sol\":\"FileVault\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"contracts/fileVault.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.8.20;\\n\\n/// @title FileVault - On-chain access control for encrypted off-chain storage\\n/// @notice Stores encrypted file references (hash + CID) and manages access with security improvements\\ncontract FileVault {\\n    struct File {\\n        address uploader; // Who uploaded the file\\n        string cid; // IPFS CID of the encrypted file\\n        mapping(address => bool) authorized; // Access control\\n        bool exists; // Flag to check if file exists\\n    }\\n\\n    // Constants for security limits\\n    uint256 public constant MAX_ALLOWED_USERS = 100;\\n\\n    // Mapping: fileHash (SHA-256 of encrypted file) => File struct\\n    mapping(bytes32 => File) private files;\\n\\n    /// @dev Events for frontend/backends to track changes\\n    event FileUploaded(bytes32 indexed fileHash, string cid, address indexed uploader, address[] allowedUsers);\\n    event FileUpdated(bytes32 indexed fileHash, string newCid, address indexed uploader);\\n    event FileDeleted(bytes32 indexed fileHash, address indexed uploader);\\n    event AccessGranted(bytes32 indexed fileHash, address indexed user);\\n    event AccessRevoked(bytes32 indexed fileHash, address indexed user);\\n    event OwnershipTransferred(bytes32 indexed fileHash, address indexed previousOwner, address indexed newOwner);\\n\\n    /// @notice Upload a new file reference (CID + hash) and set initial access list\\n    /// @param fileHash SHA-256 hash of the encrypted file\\n    /// @param cid IPFS CID of the encrypted file\\n    /// @param allowedUsers List of addresses initially granted access\\n    function storeFileHash(bytes32 fileHash, string calldata cid, address[] calldata allowedUsers) external {\\n        require(!files[fileHash].exists, \\\"File already exists\\\");\\n        require(bytes(cid).length > 0, \\\"CID cannot be empty\\\");\\n        require(allowedUsers.length <= MAX_ALLOWED_USERS, \\\"Too many users\\\");\\n\\n        File storage f = files[fileHash];\\n        f.uploader = msg.sender;\\n        f.cid = cid;\\n        f.exists = true;\\n\\n        // Automatically grant access to uploader\\n        f.authorized[msg.sender] = true;\\n\\n        // Grant access to allowed users (with duplicate and zero address checks)\\n        for (uint256 i = 0; i < allowedUsers.length; i++) {\\n            address user = allowedUsers[i];\\n            require(user != address(0), \\\"Invalid address in allowedUsers\\\");\\n\\n            // Only set if not already authorized (prevents wasted gas on duplicates)\\n            if (!f.authorized[user]) {\\n                f.authorized[user] = true;\\n            }\\n        }\\n\\n        emit FileUploaded(fileHash, cid, msg.sender, allowedUsers);\\n    }\\n\\n    /// @notice Update the CID of an existing file (only uploader can update)\\n    /// @param fileHash SHA-256 hash of the file\\n    /// @param newCid New IPFS CID\\n    function updateCid(bytes32 fileHash, string calldata newCid) external {\\n        require(files[fileHash].exists, \\\"File does not exist\\\");\\n        require(files[fileHash].uploader == msg.sender, \\\"Not uploader\\\");\\n        require(bytes(newCid).length > 0, \\\"CID cannot be empty\\\");\\n\\n        files[fileHash].cid = newCid;\\n        emit FileUpdated(fileHash, newCid, msg.sender);\\n    }\\n\\n    /// @notice Delete a file reference and clear all access (only uploader can delete)\\n    /// @param fileHash SHA-256 hash of the file\\n    function deleteFile(bytes32 fileHash) external {\\n        require(files[fileHash].exists, \\\"File does not exist\\\");\\n        require(files[fileHash].uploader == msg.sender, \\\"Not uploader\\\");\\n\\n        // Note: Due to Solidity limitations, we cannot iterate and delete all authorized users\\n        // The mapping will remain in storage but the file is marked as deleted\\n        files[fileHash].exists = false;\\n        files[fileHash].uploader = address(0);\\n        files[fileHash].cid = \\\"\\\";\\n\\n        emit FileDeleted(fileHash, msg.sender);\\n    }\\n\\n    /// @notice Transfer ownership of a file to a new address (only uploader can transfer)\\n    /// @param fileHash SHA-256 hash of the file\\n    /// @param newOwner Address of the new owner\\n    function transferOwnership(bytes32 fileHash, address newOwner) external {\\n        require(files[fileHash].exists, \\\"File does not exist\\\");\\n        require(files[fileHash].uploader == msg.sender, \\\"Not uploader\\\");\\n        require(newOwner != address(0), \\\"Invalid new owner address\\\");\\n        require(newOwner != msg.sender, \\\"Already the owner\\\");\\n\\n        address previousOwner = files[fileHash].uploader;\\n        files[fileHash].uploader = newOwner;\\n\\n        // Automatically grant access to new owner\\n        files[fileHash].authorized[newOwner] = true;\\n\\n        emit OwnershipTransferred(fileHash, previousOwner, newOwner);\\n    }\\n\\n    /// @notice Grant access to a user (only uploader can grant)\\n    /// @param fileHash SHA-256 hash of the file\\n    /// @param user Address to grant access to\\n    function grantAccess(bytes32 fileHash, address user) external {\\n        require(files[fileHash].exists, \\\"File does not exist\\\");\\n        require(files[fileHash].uploader == msg.sender, \\\"Not uploader\\\");\\n        require(user != address(0), \\\"Invalid user address\\\");\\n\\n        files[fileHash].authorized[user] = true;\\n        emit AccessGranted(fileHash, user);\\n    }\\n\\n    /// @notice Grant access to multiple users (only uploader can grant)\\n    /// @param fileHash SHA-256 hash of the file\\n    /// @param users Array of addresses to grant access to\\n    function grantAccessBatch(bytes32 fileHash, address[] calldata users) external {\\n        require(files[fileHash].exists, \\\"File does not exist\\\");\\n        require(files[fileHash].uploader == msg.sender, \\\"Not uploader\\\");\\n        require(users.length <= MAX_ALLOWED_USERS, \\\"Too many users\\\");\\n\\n        for (uint256 i = 0; i < users.length; i++) {\\n            address user = users[i];\\n            require(user != address(0), \\\"Invalid user address\\\");\\n\\n            if (!files[fileHash].authorized[user]) {\\n                files[fileHash].authorized[user] = true;\\n                emit AccessGranted(fileHash, user);\\n            }\\n        }\\n    }\\n\\n    /// @notice Revoke access from a user (only uploader can revoke)\\n    /// @param fileHash SHA-256 hash of the file\\n    /// @param user Address to revoke access from\\n    function revokeAccess(bytes32 fileHash, address user) external {\\n        require(files[fileHash].exists, \\\"File does not exist\\\");\\n        require(files[fileHash].uploader == msg.sender, \\\"Not uploader\\\");\\n        require(user != address(0), \\\"Invalid user address\\\");\\n\\n        files[fileHash].authorized[user] = false;\\n        emit AccessRevoked(fileHash, user);\\n    }\\n\\n    /// @notice Check if a user is authorized to access a file\\n    /// @param fileHash SHA-256 hash of the file\\n    /// @param user Address to check\\n    /// @return bool True if authorized, false otherwise\\n    function isAuthorized(bytes32 fileHash, address user) external view returns (bool) {\\n        require(files[fileHash].exists, \\\"File does not exist\\\");\\n        return files[fileHash].authorized[user];\\n    }\\n\\n    /// @notice Check if caller is authorized to access a file\\n    /// @param fileHash SHA-256 hash of the file\\n    /// @return bool True if authorized, false otherwise\\n    function canAccess(bytes32 fileHash) external view returns (bool) {\\n        require(files[fileHash].exists, \\\"File does not exist\\\");\\n        return files[fileHash].authorized[msg.sender];\\n    }\\n\\n    /// @notice Get the uploader of a file\\n    /// @param fileHash SHA-256 hash of the file\\n    /// @return address Address of the uploader\\n    function getUploader(bytes32 fileHash) external view returns (address) {\\n        require(files[fileHash].exists, \\\"File does not exist\\\");\\n        return files[fileHash].uploader;\\n    }\\n\\n    /// @notice Get the CID of a file (only authorized users can access)\\n    /// @param fileHash SHA-256 hash of the file\\n    /// @return string IPFS CID\\n    function getCid(bytes32 fileHash) external view returns (string memory) {\\n        require(files[fileHash].exists, \\\"File does not exist\\\");\\n        require(files[fileHash].authorized[msg.sender], \\\"Not authorized to access this file\\\");\\n        return files[fileHash].cid;\\n    }\\n\\n    /// @notice Check if a file exists\\n    /// @param fileHash SHA-256 hash of the file\\n    /// @return bool True if file exists, false otherwise\\n    function fileExists(bytes32 fileHash) external view returns (bool) {\\n        return files[fileHash].exists;\\n    }\\n}\\n\",\"keccak256\":\"0x32457922d8a2b2cb6caf9262c65eb940a8366992cd10cdb95512ed14fac44584\",\"license\":\"MIT\"}},\"version\":1}",
-  "bytecode": "0x608060405234801561001057600080fd5b506113ea806100206000396000f3fe608060405234801561001057600080fd5b50600436106100cf5760003560e01c80636ab799f11161008c578063aa5de4bd11610066578063aa5de4bd146101c1578063ca44c140146101e1578063eac61dbd146101f4578063ef5d6bbb1461020a57600080fd5b80636ab799f1146101885780638d53b2081461019b578063956db465146101ae57600080fd5b80630982b69a146100d45780630cec5f62146100e95780631afb966d146101245780631e92a4dd1461013757806340554c3a1461016257806369e5fa8714610175575b600080fd5b6100e76100e2366004610e13565b61021d565b005b61010f6100f7366004610e5f565b60009081526020819052604090206003015460ff1690565b60405190151581526020015b60405180910390f35b61010f610132366004610e5f565b610336565b61014a610145366004610e5f565b610389565b6040516001600160a01b03909116815260200161011b565b6100e7610170366004610e94565b6103d6565b6100e7610183366004610f05565b6104c2565b6100e7610196366004610e5f565b610731565b6100e76101a9366004610e94565b610814565b61010f6101bc366004610e94565b6108fd565b6101d46101cf366004610e5f565b61095c565b60405161011b9190610f7f565b6100e76101ef366004610fcd565b610aa6565b6101fc606481565b60405190815260200161011b565b6100e7610218366004610e94565b610c4b565b60008381526020819052604090206003015460ff166102575760405162461bcd60e51b815260040161024e9061100c565b60405180910390fd5b6000838152602081905260409020546001600160a01b0316331461028d5760405162461bcd60e51b815260040161024e90611039565b806102d05760405162461bcd60e51b81526020600482015260136024820152724349442063616e6e6f7420626520656d70747960681b604482015260640161024e565b60008381526020819052604090206001016102ec8284836110fe565b50336001600160a01b0316837fb1f7bf30ab7e9cdf31dd97a458cbd0d9bd4f35da5674e10e47d5f826ebbc461484846040516103299291906111e8565b60405180910390a3505050565b60008181526020819052604081206003015460ff166103675760405162461bcd60e51b815260040161024e9061100c565b5060009081526020818152604080832033845260020190915290205460ff1690565b60008181526020819052604081206003015460ff166103ba5760405162461bcd60e51b815260040161024e9061100c565b506000908152602081905260409020546001600160a01b031690565b60008281526020819052604090206003015460ff166104075760405162461bcd60e51b815260040161024e9061100c565b6000828152602081905260409020546001600160a01b0316331461043d5760405162461bcd60e51b815260040161024e90611039565b6001600160a01b0381166104635760405162461bcd60e51b815260040161024e90611204565b6000828152602081815260408083206001600160a01b0385168085526002909101909252808320805460ff1916600117905551909184917ff20afd7b032307b01752ee91e3f6a4b83a5b4ab631f9ab279322fd45634382c09190a35050565b60008581526020819052604090206003015460ff161561051a5760405162461bcd60e51b815260206004820152601360248201527246696c6520616c72656164792065786973747360681b604482015260640161024e565b8261055d5760405162461bcd60e51b81526020600482015260136024820152724349442063616e6e6f7420626520656d70747960681b604482015260640161024e565b606481111561059f5760405162461bcd60e51b815260206004820152600e60248201526d546f6f206d616e7920757365727360901b604482015260640161024e565b600085815260208190526040902080546001600160a01b03191633178155600181016105cc8587836110fe565b50600381018054600160ff1991821681179092553360009081526002840160205260408120805490921690921790555b828110156106e057600084848381811061061857610618611232565b905060200201602081019061062d9190611248565b90506001600160a01b0381166106855760405162461bcd60e51b815260206004820152601f60248201527f496e76616c6964206164647265737320696e20616c6c6f776564557365727300604482015260640161024e565b6001600160a01b038116600090815260028401602052604090205460ff166106cd576001600160a01b03811660009081526002840160205260409020805460ff191660011790555b50806106d88161126a565b9150506105fc565b50336001600160a01b0316867f63871bfb42ebc1b1c2cff8a2382d4f32cb053002dded6519503ff65e0a41cdae878787876040516107219493929190611291565b60405180910390a3505050505050565b60008181526020819052604090206003015460ff166107625760405162461bcd60e51b815260040161024e9061100c565b6000818152602081905260409020546001600160a01b031633146107985760405162461bcd60e51b815260040161024e90611039565b60008181526020818152604080832060038101805460ff1916905580546001600160a01b03191681558151808401909252838252848452929091526001909101906107e390826112f4565b50604051339082907fe9d807989e1b989644726a2599acb272adc7eeafbc532de494ba8ded0593535190600090a350565b60008281526020819052604090206003015460ff166108455760405162461bcd60e51b815260040161024e9061100c565b6000828152602081905260409020546001600160a01b0316331461087b5760405162461bcd60e51b815260040161024e90611039565b6001600160a01b0381166108a15760405162461bcd60e51b815260040161024e90611204565b6000828152602081815260408083206001600160a01b0385168085526002909101909252808320805460ff1916905551909184917fe7906b77ea165c70ad8268ce5b59b778a198edf9c1ae4118378eefdc76fce5f49190a35050565b60008281526020819052604081206003015460ff1661092e5760405162461bcd60e51b815260040161024e9061100c565b506000828152602081815260408083206001600160a01b038516845260020190915290205460ff1692915050565b60008181526020819052604090206003015460609060ff166109905760405162461bcd60e51b815260040161024e9061100c565b60008281526020818152604080832033845260020190915290205460ff16610a055760405162461bcd60e51b815260206004820152602260248201527f4e6f7420617574686f72697a656420746f2061636365737320746869732066696044820152616c6560f01b606482015260840161024e565b60008281526020819052604090206001018054610a2190611075565b80601f0160208091040260200160405190810160405280929190818152602001828054610a4d90611075565b8015610a9a5780601f10610a6f57610100808354040283529160200191610a9a565b820191906000526020600020905b815481529060010190602001808311610a7d57829003601f168201915b50505050509050919050565b60008381526020819052604090206003015460ff16610ad75760405162461bcd60e51b815260040161024e9061100c565b6000838152602081905260409020546001600160a01b03163314610b0d5760405162461bcd60e51b815260040161024e90611039565b6064811115610b4f5760405162461bcd60e51b815260206004820152600e60248201526d546f6f206d616e7920757365727360901b604482015260640161024e565b60005b81811015610c45576000838383818110610b6e57610b6e611232565b9050602002016020810190610b839190611248565b90506001600160a01b038116610bab5760405162461bcd60e51b815260040161024e90611204565b6000858152602081815260408083206001600160a01b038516845260020190915290205460ff16610c32576000858152602081815260408083206001600160a01b0385168085526002909101909252808320805460ff1916600117905551909187917ff20afd7b032307b01752ee91e3f6a4b83a5b4ab631f9ab279322fd45634382c09190a35b5080610c3d8161126a565b915050610b52565b50505050565b60008281526020819052604090206003015460ff16610c7c5760405162461bcd60e51b815260040161024e9061100c565b6000828152602081905260409020546001600160a01b03163314610cb25760405162461bcd60e51b815260040161024e90611039565b6001600160a01b038116610d085760405162461bcd60e51b815260206004820152601960248201527f496e76616c6964206e6577206f776e6572206164647265737300000000000000604482015260640161024e565b336001600160a01b03821603610d545760405162461bcd60e51b815260206004820152601160248201527020b63932b0b23c903a34329037bbb732b960791b604482015260640161024e565b60008281526020818152604080832080546001600160a01b031981166001600160a01b0387811691821784558187526002909301909452828520805460ff191660011790559151911692839186917f0b659dccc8eb950324170e8d9598af5ee04ee070883eb28651a96788721fbf8391a4505050565b60008083601f840112610ddc57600080fd5b50813567ffffffffffffffff811115610df457600080fd5b602083019150836020828501011115610e0c57600080fd5b9250929050565b600080600060408486031215610e2857600080fd5b83359250602084013567ffffffffffffffff811115610e4657600080fd5b610e5286828701610dca565b9497909650939450505050565b600060208284031215610e7157600080fd5b5035919050565b80356001600160a01b0381168114610e8f57600080fd5b919050565b60008060408385031215610ea757600080fd5b82359150610eb760208401610e78565b90509250929050565b60008083601f840112610ed257600080fd5b50813567ffffffffffffffff811115610eea57600080fd5b6020830191508360208260051b8501011115610e0c57600080fd5b600080600080600060608688031215610f1d57600080fd5b85359450602086013567ffffffffffffffff80821115610f3c57600080fd5b610f4889838a01610dca565b90965094506040880135915080821115610f6157600080fd5b50610f6e88828901610ec0565b969995985093965092949392505050565b600060208083528351808285015260005b81811015610fac57858101830151858201604001528201610f90565b506000604082860101526040601f19601f8301168501019250505092915050565b600080600060408486031215610fe257600080fd5b83359250602084013567ffffffffffffffff81111561100057600080fd5b610e5286828701610ec0565b602080825260139082015272119a5b1948191bd95cc81b9bdd08195e1a5cdd606a1b604082015260600190565b6020808252600c908201526b2737ba103ab83637b0b232b960a11b604082015260600190565b634e487b7160e01b600052604160045260246000fd5b600181811c9082168061108957607f821691505b6020821081036110a957634e487b7160e01b600052602260045260246000fd5b50919050565b601f8211156110f957600081815260208120601f850160051c810160208610156110d65750805b601f850160051c820191505b818110156110f5578281556001016110e2565b5050505b505050565b67ffffffffffffffff8311156111165761111661105f565b61112a836111248354611075565b836110af565b6000601f84116001811461115e57600085156111465750838201355b600019600387901b1c1916600186901b1783556111b8565b600083815260209020601f19861690835b8281101561118f578685013582556020948501946001909201910161116f565b50868210156111ac5760001960f88860031b161c19848701351681555b505060018560011b0183555b5050505050565b81835281816020850137506000828201602090810191909152601f909101601f19169091010190565b6020815260006111fc6020830184866111bf565b949350505050565b602080825260149082015273496e76616c69642075736572206164647265737360601b604082015260600190565b634e487b7160e01b600052603260045260246000fd5b60006020828403121561125a57600080fd5b61126382610e78565b9392505050565b60006001820161128a57634e487b7160e01b600052601160045260246000fd5b5060010190565b6040815260006112a56040830186886111bf565b8281036020848101919091528482528591810160005b868110156112e7576001600160a01b036112d485610e78565b16825292820192908201906001016112bb565b5098975050505050505050565b815167ffffffffffffffff81111561130e5761130e61105f565b6113228161131c8454611075565b846110af565b602080601f831160018114611357576000841561133f5750858301515b600019600386901b1c1916600185901b1785556110f5565b600085815260208120601f198616915b8281101561138657888601518255948401946001909101908401611367565b50858210156113a45787850151600019600388901b60f8161c191681555b5050505050600190811b0190555056fea26469706673582212207fe74254f896d5f7031925b99b096efdb15c8bd31f0dd7006f0fa80412806c0164736f6c63430008140033",
-  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100cf5760003560e01c80636ab799f11161008c578063aa5de4bd11610066578063aa5de4bd146101c1578063ca44c140146101e1578063eac61dbd146101f4578063ef5d6bbb1461020a57600080fd5b80636ab799f1146101885780638d53b2081461019b578063956db465146101ae57600080fd5b80630982b69a146100d45780630cec5f62146100e95780631afb966d146101245780631e92a4dd1461013757806340554c3a1461016257806369e5fa8714610175575b600080fd5b6100e76100e2366004610e13565b61021d565b005b61010f6100f7366004610e5f565b60009081526020819052604090206003015460ff1690565b60405190151581526020015b60405180910390f35b61010f610132366004610e5f565b610336565b61014a610145366004610e5f565b610389565b6040516001600160a01b03909116815260200161011b565b6100e7610170366004610e94565b6103d6565b6100e7610183366004610f05565b6104c2565b6100e7610196366004610e5f565b610731565b6100e76101a9366004610e94565b610814565b61010f6101bc366004610e94565b6108fd565b6101d46101cf366004610e5f565b61095c565b60405161011b9190610f7f565b6100e76101ef366004610fcd565b610aa6565b6101fc606481565b60405190815260200161011b565b6100e7610218366004610e94565b610c4b565b60008381526020819052604090206003015460ff166102575760405162461bcd60e51b815260040161024e9061100c565b60405180910390fd5b6000838152602081905260409020546001600160a01b0316331461028d5760405162461bcd60e51b815260040161024e90611039565b806102d05760405162461bcd60e51b81526020600482015260136024820152724349442063616e6e6f7420626520656d70747960681b604482015260640161024e565b60008381526020819052604090206001016102ec8284836110fe565b50336001600160a01b0316837fb1f7bf30ab7e9cdf31dd97a458cbd0d9bd4f35da5674e10e47d5f826ebbc461484846040516103299291906111e8565b60405180910390a3505050565b60008181526020819052604081206003015460ff166103675760405162461bcd60e51b815260040161024e9061100c565b5060009081526020818152604080832033845260020190915290205460ff1690565b60008181526020819052604081206003015460ff166103ba5760405162461bcd60e51b815260040161024e9061100c565b506000908152602081905260409020546001600160a01b031690565b60008281526020819052604090206003015460ff166104075760405162461bcd60e51b815260040161024e9061100c565b6000828152602081905260409020546001600160a01b0316331461043d5760405162461bcd60e51b815260040161024e90611039565b6001600160a01b0381166104635760405162461bcd60e51b815260040161024e90611204565b6000828152602081815260408083206001600160a01b0385168085526002909101909252808320805460ff1916600117905551909184917ff20afd7b032307b01752ee91e3f6a4b83a5b4ab631f9ab279322fd45634382c09190a35050565b60008581526020819052604090206003015460ff161561051a5760405162461bcd60e51b815260206004820152601360248201527246696c6520616c72656164792065786973747360681b604482015260640161024e565b8261055d5760405162461bcd60e51b81526020600482015260136024820152724349442063616e6e6f7420626520656d70747960681b604482015260640161024e565b606481111561059f5760405162461bcd60e51b815260206004820152600e60248201526d546f6f206d616e7920757365727360901b604482015260640161024e565b600085815260208190526040902080546001600160a01b03191633178155600181016105cc8587836110fe565b50600381018054600160ff1991821681179092553360009081526002840160205260408120805490921690921790555b828110156106e057600084848381811061061857610618611232565b905060200201602081019061062d9190611248565b90506001600160a01b0381166106855760405162461bcd60e51b815260206004820152601f60248201527f496e76616c6964206164647265737320696e20616c6c6f776564557365727300604482015260640161024e565b6001600160a01b038116600090815260028401602052604090205460ff166106cd576001600160a01b03811660009081526002840160205260409020805460ff191660011790555b50806106d88161126a565b9150506105fc565b50336001600160a01b0316867f63871bfb42ebc1b1c2cff8a2382d4f32cb053002dded6519503ff65e0a41cdae878787876040516107219493929190611291565b60405180910390a3505050505050565b60008181526020819052604090206003015460ff166107625760405162461bcd60e51b815260040161024e9061100c565b6000818152602081905260409020546001600160a01b031633146107985760405162461bcd60e51b815260040161024e90611039565b60008181526020818152604080832060038101805460ff1916905580546001600160a01b03191681558151808401909252838252848452929091526001909101906107e390826112f4565b50604051339082907fe9d807989e1b989644726a2599acb272adc7eeafbc532de494ba8ded0593535190600090a350565b60008281526020819052604090206003015460ff166108455760405162461bcd60e51b815260040161024e9061100c565b6000828152602081905260409020546001600160a01b0316331461087b5760405162461bcd60e51b815260040161024e90611039565b6001600160a01b0381166108a15760405162461bcd60e51b815260040161024e90611204565b6000828152602081815260408083206001600160a01b0385168085526002909101909252808320805460ff1916905551909184917fe7906b77ea165c70ad8268ce5b59b778a198edf9c1ae4118378eefdc76fce5f49190a35050565b60008281526020819052604081206003015460ff1661092e5760405162461bcd60e51b815260040161024e9061100c565b506000828152602081815260408083206001600160a01b038516845260020190915290205460ff1692915050565b60008181526020819052604090206003015460609060ff166109905760405162461bcd60e51b815260040161024e9061100c565b60008281526020818152604080832033845260020190915290205460ff16610a055760405162461bcd60e51b815260206004820152602260248201527f4e6f7420617574686f72697a656420746f2061636365737320746869732066696044820152616c6560f01b606482015260840161024e565b60008281526020819052604090206001018054610a2190611075565b80601f0160208091040260200160405190810160405280929190818152602001828054610a4d90611075565b8015610a9a5780601f10610a6f57610100808354040283529160200191610a9a565b820191906000526020600020905b815481529060010190602001808311610a7d57829003601f168201915b50505050509050919050565b60008381526020819052604090206003015460ff16610ad75760405162461bcd60e51b815260040161024e9061100c565b6000838152602081905260409020546001600160a01b03163314610b0d5760405162461bcd60e51b815260040161024e90611039565b6064811115610b4f5760405162461bcd60e51b815260206004820152600e60248201526d546f6f206d616e7920757365727360901b604482015260640161024e565b60005b81811015610c45576000838383818110610b6e57610b6e611232565b9050602002016020810190610b839190611248565b90506001600160a01b038116610bab5760405162461bcd60e51b815260040161024e90611204565b6000858152602081815260408083206001600160a01b038516845260020190915290205460ff16610c32576000858152602081815260408083206001600160a01b0385168085526002909101909252808320805460ff1916600117905551909187917ff20afd7b032307b01752ee91e3f6a4b83a5b4ab631f9ab279322fd45634382c09190a35b5080610c3d8161126a565b915050610b52565b50505050565b60008281526020819052604090206003015460ff16610c7c5760405162461bcd60e51b815260040161024e9061100c565b6000828152602081905260409020546001600160a01b03163314610cb25760405162461bcd60e51b815260040161024e90611039565b6001600160a01b038116610d085760405162461bcd60e51b815260206004820152601960248201527f496e76616c6964206e6577206f776e6572206164647265737300000000000000604482015260640161024e565b336001600160a01b03821603610d545760405162461bcd60e51b815260206004820152601160248201527020b63932b0b23c903a34329037bbb732b960791b604482015260640161024e565b60008281526020818152604080832080546001600160a01b031981166001600160a01b0387811691821784558187526002909301909452828520805460ff191660011790559151911692839186917f0b659dccc8eb950324170e8d9598af5ee04ee070883eb28651a96788721fbf8391a4505050565b60008083601f840112610ddc57600080fd5b50813567ffffffffffffffff811115610df457600080fd5b602083019150836020828501011115610e0c57600080fd5b9250929050565b600080600060408486031215610e2857600080fd5b83359250602084013567ffffffffffffffff811115610e4657600080fd5b610e5286828701610dca565b9497909650939450505050565b600060208284031215610e7157600080fd5b5035919050565b80356001600160a01b0381168114610e8f57600080fd5b919050565b60008060408385031215610ea757600080fd5b82359150610eb760208401610e78565b90509250929050565b60008083601f840112610ed257600080fd5b50813567ffffffffffffffff811115610eea57600080fd5b6020830191508360208260051b8501011115610e0c57600080fd5b600080600080600060608688031215610f1d57600080fd5b85359450602086013567ffffffffffffffff80821115610f3c57600080fd5b610f4889838a01610dca565b90965094506040880135915080821115610f6157600080fd5b50610f6e88828901610ec0565b969995985093965092949392505050565b600060208083528351808285015260005b81811015610fac57858101830151858201604001528201610f90565b506000604082860101526040601f19601f8301168501019250505092915050565b600080600060408486031215610fe257600080fd5b83359250602084013567ffffffffffffffff81111561100057600080fd5b610e5286828701610ec0565b602080825260139082015272119a5b1948191bd95cc81b9bdd08195e1a5cdd606a1b604082015260600190565b6020808252600c908201526b2737ba103ab83637b0b232b960a11b604082015260600190565b634e487b7160e01b600052604160045260246000fd5b600181811c9082168061108957607f821691505b6020821081036110a957634e487b7160e01b600052602260045260246000fd5b50919050565b601f8211156110f957600081815260208120601f850160051c810160208610156110d65750805b601f850160051c820191505b818110156110f5578281556001016110e2565b5050505b505050565b67ffffffffffffffff8311156111165761111661105f565b61112a836111248354611075565b836110af565b6000601f84116001811461115e57600085156111465750838201355b600019600387901b1c1916600186901b1783556111b8565b600083815260209020601f19861690835b8281101561118f578685013582556020948501946001909201910161116f565b50868210156111ac5760001960f88860031b161c19848701351681555b505060018560011b0183555b5050505050565b81835281816020850137506000828201602090810191909152601f909101601f19169091010190565b6020815260006111fc6020830184866111bf565b949350505050565b602080825260149082015273496e76616c69642075736572206164647265737360601b604082015260600190565b634e487b7160e01b600052603260045260246000fd5b60006020828403121561125a57600080fd5b61126382610e78565b9392505050565b60006001820161128a57634e487b7160e01b600052601160045260246000fd5b5060010190565b6040815260006112a56040830186886111bf565b8281036020848101919091528482528591810160005b868110156112e7576001600160a01b036112d485610e78565b16825292820192908201906001016112bb565b5098975050505050505050565b815167ffffffffffffffff81111561130e5761130e61105f565b6113228161131c8454611075565b846110af565b602080601f831160018114611357576000841561133f5750858301515b600019600386901b1c1916600185901b1785556110f5565b600085815260208120601f198616915b8281101561138657888601518255948401946001909101908401611367565b50858210156113a45787850151600019600388901b60f8161c191681555b5050505050600190811b0190555056fea26469706673582212207fe74254f896d5f7031925b99b096efdb15c8bd31f0dd7006f0fa80412806c0164736f6c63430008140033",
-  "devdoc": {
-    "events": {
-      "FileUploaded(bytes32,string,address,address[])": {
-        "details": "Events for frontend/backends to track changes"
-      }
-    },
-    "kind": "dev",
-    "methods": {
-      "canAccess(bytes32)": {
-        "params": {
-          "fileHash": "SHA-256 hash of the file"
-        },
-        "returns": {
-          "_0": "bool True if authorized, false otherwise"
-        }
-      },
-      "deleteFile(bytes32)": {
-        "params": {
-          "fileHash": "SHA-256 hash of the file"
-        }
-      },
-      "fileExists(bytes32)": {
-        "params": {
-          "fileHash": "SHA-256 hash of the file"
-        },
-        "returns": {
-          "_0": "bool True if file exists, false otherwise"
-        }
-      },
-      "getCid(bytes32)": {
-        "params": {
-          "fileHash": "SHA-256 hash of the file"
-        },
-        "returns": {
-          "_0": "string IPFS CID"
-        }
-      },
-      "getUploader(bytes32)": {
-        "params": {
-          "fileHash": "SHA-256 hash of the file"
-        },
-        "returns": {
-          "_0": "address Address of the uploader"
-        }
-      },
-      "grantAccess(bytes32,address)": {
-        "params": {
-          "fileHash": "SHA-256 hash of the file",
-          "user": "Address to grant access to"
-        }
-      },
-      "grantAccessBatch(bytes32,address[])": {
-        "params": {
-          "fileHash": "SHA-256 hash of the file",
-          "users": "Array of addresses to grant access to"
-        }
-      },
-      "isAuthorized(bytes32,address)": {
-        "params": {
-          "fileHash": "SHA-256 hash of the file",
-          "user": "Address to check"
-        },
-        "returns": {
-          "_0": "bool True if authorized, false otherwise"
-        }
-      },
-      "revokeAccess(bytes32,address)": {
-        "params": {
-          "fileHash": "SHA-256 hash of the file",
-          "user": "Address to revoke access from"
-        }
-      },
-      "storeFileHash(bytes32,string,address[])": {
-        "params": {
-          "allowedUsers": "List of addresses initially granted access",
-          "cid": "IPFS CID of the encrypted file",
-          "fileHash": "SHA-256 hash of the encrypted file"
-        }
-      },
-      "transferOwnership(bytes32,address)": {
-        "params": {
-          "fileHash": "SHA-256 hash of the file",
-          "newOwner": "Address of the new owner"
-        }
-      },
-      "updateCid(bytes32,string)": {
-        "params": {
-          "fileHash": "SHA-256 hash of the file",
-          "newCid": "New IPFS CID"
-        }
-      }
-    },
-    "title": "FileVault - On-chain access control for encrypted off-chain storage",
-    "version": 1
-  },
-  "userdoc": {
-    "kind": "user",
-    "methods": {
-      "canAccess(bytes32)": {
-        "notice": "Check if caller is authorized to access a file"
-      },
-      "deleteFile(bytes32)": {
-        "notice": "Delete a file reference and clear all access (only uploader can delete)"
-      },
-      "fileExists(bytes32)": {
-        "notice": "Check if a file exists"
-      },
-      "getCid(bytes32)": {
-        "notice": "Get the CID of a file (only authorized users can access)"
-      },
-      "getUploader(bytes32)": {
-        "notice": "Get the uploader of a file"
-      },
-      "grantAccess(bytes32,address)": {
-        "notice": "Grant access to a user (only uploader can grant)"
-      },
-      "grantAccessBatch(bytes32,address[])": {
-        "notice": "Grant access to multiple users (only uploader can grant)"
-      },
-      "isAuthorized(bytes32,address)": {
-        "notice": "Check if a user is authorized to access a file"
-      },
-      "revokeAccess(bytes32,address)": {
-        "notice": "Revoke access from a user (only uploader can revoke)"
-      },
-      "storeFileHash(bytes32,string,address[])": {
-        "notice": "Upload a new file reference (CID + hash) and set initial access list"
-      },
-      "transferOwnership(bytes32,address)": {
-        "notice": "Transfer ownership of a file to a new address (only uploader can transfer)"
-      },
-      "updateCid(bytes32,string)": {
-        "notice": "Update the CID of an existing file (only uploader can update)"
-      }
-    },
-    "notice": "Stores encrypted file references (hash + CID) and manages access with security improvements",
-    "version": 1
-  },
-  "storageLayout": {
-    "storage": [
-      {
-        "astId": 21,
-        "contract": "contracts/fileVault.sol:FileVault",
-        "label": "files",
-        "offset": 0,
-        "slot": "0",
-        "type": "t_mapping(t_bytes32,t_struct(File)13_storage)"
-      }
-    ],
-    "types": {
-      "t_address": {
-        "encoding": "inplace",
-        "label": "address",
-        "numberOfBytes": "20"
-      },
-      "t_bool": {
-        "encoding": "inplace",
-        "label": "bool",
-        "numberOfBytes": "1"
-      },
-      "t_bytes32": {
-        "encoding": "inplace",
-        "label": "bytes32",
-        "numberOfBytes": "32"
-      },
-      "t_mapping(t_address,t_bool)": {
-        "encoding": "mapping",
-        "key": "t_address",
-        "label": "mapping(address => bool)",
-        "numberOfBytes": "32",
-        "value": "t_bool"
-      },
-      "t_mapping(t_bytes32,t_struct(File)13_storage)": {
-        "encoding": "mapping",
-        "key": "t_bytes32",
-        "label": "mapping(bytes32 => struct FileVault.File)",
-        "numberOfBytes": "32",
-        "value": "t_struct(File)13_storage"
-      },
-      "t_string_storage": {
-        "encoding": "bytes",
-        "label": "string",
-        "numberOfBytes": "32"
-      },
-      "t_struct(File)13_storage": {
-        "encoding": "inplace",
-        "label": "struct FileVault.File",
-        "members": [
-          {
-            "astId": 4,
-            "contract": "contracts/fileVault.sol:FileVault",
-            "label": "uploader",
-            "offset": 0,
-            "slot": "0",
-            "type": "t_address"
-          },
-          {
-            "astId": 6,
-            "contract": "contracts/fileVault.sol:FileVault",
-            "label": "cid",
-            "offset": 0,
-            "slot": "1",
-            "type": "t_string_storage"
-          },
-          {
-            "astId": 10,
-            "contract": "contracts/fileVault.sol:FileVault",
-            "label": "authorized",
-            "offset": 0,
-            "slot": "2",
-            "type": "t_mapping(t_address,t_bool)"
-          },
-          {
-            "astId": 12,
-            "contract": "contracts/fileVault.sol:FileVault",
-            "label": "exists",
-            "offset": 0,
-            "slot": "3",
-            "type": "t_bool"
-          }
-        ],
-        "numberOfBytes": "128"
-      }
-    }
-  }
+  "numDeployments": 3,
+  "bytecode": "0x608060405234801561001057600080fd5b5061001961001e565b6100d0565b7ff0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00805468010000000000000000900460ff161561006e5760405163f92ee8a960e01b815260040160405180910390fd5b80546001600160401b03908116146100cd5780546001600160401b0319166001600160401b0390811782556040519081527fc7f505b2f371ae2175ee4913f4499e1f2633a7b5936321eed1cdaeb6115181d29060200160405180910390a15b50565b611866806100df6000396000f3fe608060405234801561001057600080fd5b506004361061012c5760003560e01c8063715018a6116100ad578063956db46511610071578063956db46514610286578063aa5de4bd14610299578063ca44c140146102b9578063eac61dbd146102cc578063f2fde38b146102e257600080fd5b8063715018a61461022b5780638129fc1c146102335780638456cb591461023b5780638d53b208146102435780638da5cb5b1461025657600080fd5b80633f4ba83a116100f45780633f4ba83a146101d257806340554c3a146101da5780635c975abb146101ed57806369e5fa87146102055780636ab799f11461021857600080fd5b80630982b69a146101315780630cec5f62146101465780631afb966d146101815780631e92a4dd146101945780633eb9ce41146101bf575b600080fd5b61014461013f366004611245565b6102f5565b005b61016c610154366004611291565b60009081526020819052604090206005015460ff1690565b60405190151581526020015b60405180910390f35b61016c61018f366004611291565b610416565b6101a76101a2366004611291565b61045f565b6040516001600160a01b039091168152602001610178565b6101446101cd3660046112c6565b6104ac565b610144610639565b6101446101e83660046112c6565b61064b565b6000805160206118118339815191525460ff1661016c565b610144610213366004611337565b6106be565b610144610226366004611291565b61087a565b610144610976565b610144610988565b610144610a8b565b6101446102513660046112c6565b610a9b565b7f9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c199300546001600160a01b03166101a7565b61016c6102943660046112c6565b610be8565b6102ac6102a7366004611291565b610c3e565b60405161017891906113b1565b6101446102c73660046113ff565b610d8e565b6102d4606481565b604051908152602001610178565b6101446102f036600461143e565b610e56565b6102fd610e94565b60008381526020819052604090206005015460ff166103375760405162461bcd60e51b815260040161032e90611460565b60405180910390fd5b6000838152602081905260409020546001600160a01b0316331461036d5760405162461bcd60e51b815260040161032e9061148d565b806103b05760405162461bcd60e51b81526020600482015260136024820152724349442063616e6e6f7420626520656d70747960681b604482015260640161032e565b60008381526020819052604090206001016103cc828483611551565b50336001600160a01b0316837fb1f7bf30ab7e9cdf31dd97a458cbd0d9bd4f35da5674e10e47d5f826ebbc4614848460405161040992919061163a565b60405180910390a3505050565b60008181526020819052604081206005015460ff1661043757506000919050565b5060009081526020818152604080832060038101543385526002909101909252909120541490565b60008181526020819052604081206005015460ff166104905760405162461bcd60e51b815260040161032e90611460565b506000908152602081905260409020546001600160a01b031690565b6104b4610e94565b60008281526020819052604090206005015460ff166104e55760405162461bcd60e51b815260040161032e90611460565b6000828152602081905260409020546001600160a01b0316331461051b5760405162461bcd60e51b815260040161032e9061148d565b6001600160a01b0381166105715760405162461bcd60e51b815260206004820152601960248201527f496e76616c6964206e6577206f776e6572206164647265737300000000000000604482015260640161032e565b336001600160a01b038216036105bd5760405162461bcd60e51b815260206004820152601160248201527020b63932b0b23c903a34329037bbb732b960791b604482015260640161032e565b600082815260208190526040902080546001600160a01b038381166001600160a01b0319831617835516906105f3908484610ec5565b816001600160a01b0316816001600160a01b0316847fe6f05981be75adb529304e990ab9a34d63aac5ef5b1d0f8677e39b614c02136060405160405180910390a4505050565b610641610fce565b610649611029565b565b610653610e94565b6000828152602081905260409020600581015460ff166106855760405162461bcd60e51b815260040161032e90611460565b80546001600160a01b031633146106ae5760405162461bcd60e51b815260040161032e9061148d565b6106b9818484610ec5565b505050565b6106c6610e94565b826107095760405162461bcd60e51b81526020600482015260136024820152724349442063616e6e6f7420626520656d70747960681b604482015260640161032e565b606481111561072a5760405162461bcd60e51b815260040161032e90611656565b6000858152602081905260409020600581015460ff16156107835760405162461bcd60e51b815260206004820152601360248201527246696c6520616c72656164792065786973747360681b604482015260640161032e565b80546001600160a01b03191633178155600181016107a2858783611551565b5060058101805460ff191660011790556003810180549060006107c483611694565b9091555050600060048201556107db818733610ec5565b60005b828110156108295761081782888686858181106107fd576107fd6116ad565b9050602002016020810190610812919061143e565b610ec5565b8061082181611694565b9150506107de565b50336001600160a01b0316867f63871bfb42ebc1b1c2cff8a2382d4f32cb053002dded6519503ff65e0a41cdae8787878760405161086a94939291906116c3565b60405180910390a3505050505050565b610882610e94565b60008181526020819052604090206005015460ff166108b35760405162461bcd60e51b815260040161032e90611460565b6000818152602081905260409020546001600160a01b031633146108e95760405162461bcd60e51b815260040161032e9061148d565b60008181526020818152604080832060058101805460ff1916905580546001600160a01b03191681558151808401909252838252848452929091526001909101906109349082611726565b5060008181526020819052604080822060040182905551339183917fe9d807989e1b989644726a2599acb272adc7eeafbc532de494ba8ded059353519190a350565b61097e610fce565b6106496000611089565b60006109926110fa565b805490915060ff600160401b820416159067ffffffffffffffff166000811580156109ba5750825b905060008267ffffffffffffffff1660011480156109d75750303b155b9050811580156109e5575080155b15610a035760405163f92ee8a960e01b815260040160405180910390fd5b845467ffffffffffffffff191660011785558315610a2d57845460ff60401b1916600160401b1785555b610a3633611123565b610a3e611134565b8315610a8457845460ff60401b19168555604051600181527fc7f505b2f371ae2175ee4913f4499e1f2633a7b5936321eed1cdaeb6115181d29060200160405180910390a15b5050505050565b610a93610fce565b61064961113c565b610aa3610e94565b6000828152602081905260409020600581015460ff16610ad55760405162461bcd60e51b815260040161032e90611460565b80546001600160a01b03163314610afe5760405162461bcd60e51b815260040161032e9061148d565b6001600160a01b038216610b4b5760405162461bcd60e51b8152602060048201526014602482015273496e76616c69642075736572206164647265737360601b604482015260640161032e565b60038101546001600160a01b0383166000908152600283016020526040902054036106b9576001600160a01b0382166000908152600282016020526040812055600481015415610bad57600481018054906000610ba7836117e6565b91905055505b6040516001600160a01b0383169084907fe7906b77ea165c70ad8268ce5b59b778a198edf9c1ae4118378eefdc76fce5f490600090a3505050565b60008281526020819052604081206005015460ff16610c0957506000610c38565b5060008281526020818152604080832060038101546001600160a01b0386168552600290910190925290912054145b92915050565b60008181526020819052604090206005015460609060ff16610c725760405162461bcd60e51b815260040161032e90611460565b600082815260208181526040808320600381015433855260029091019092529091205414610ced5760405162461bcd60e51b815260206004820152602260248201527f4e6f7420617574686f72697a656420746f2061636365737320746869732066696044820152616c6560f01b606482015260840161032e565b60008281526020819052604090206001018054610d09906114c9565b80601f0160208091040260200160405190810160405280929190818152602001828054610d35906114c9565b8015610d825780601f10610d5757610100808354040283529160200191610d82565b820191906000526020600020905b815481529060010190602001808311610d6557829003601f168201915b50505050509050919050565b610d96610e94565b6000838152602081905260409020600581015460ff16610dc85760405162461bcd60e51b815260040161032e90611460565b80546001600160a01b03163314610df15760405162461bcd60e51b815260040161032e9061148d565b6004810154606490610e049084906117fd565b1115610e225760405162461bcd60e51b815260040161032e90611656565b60005b82811015610a8457610e4482868686858181106107fd576107fd6116ad565b80610e4e81611694565b915050610e25565b610e5e610fce565b6001600160a01b038116610e8857604051631e4fbdf760e01b81526000600482015260240161032e565b610e9181611089565b50565b6000805160206118118339815191525460ff16156106495760405163d93c066560e01b815260040160405180910390fd5b6001600160a01b038116610f125760405162461bcd60e51b8152602060048201526014602482015273496e76616c69642075736572206164647265737360601b604482015260640161032e565b60038301546001600160a01b0382166000908152600285016020526040902054146106b9576064836004015410610f5b5760405162461bcd60e51b815260040161032e90611656565b60038301546001600160a01b038216600090815260028501602052604081209190915560048401805491610f8e83611694565b90915550506040516001600160a01b0382169083907ff20afd7b032307b01752ee91e3f6a4b83a5b4ab631f9ab279322fd45634382c090600090a3505050565b336110007f9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c199300546001600160a01b031690565b6001600160a01b0316146106495760405163118cdaa760e01b815233600482015260240161032e565b611031611185565b600080516020611811833981519152805460ff191681557f5db9ee0a495bf2e6ff9c91a7834c1ba4fdd244a5e8aa4e537bd38aeae4b073aa335b6040516001600160a01b03909116815260200160405180910390a150565b7f9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c19930080546001600160a01b031981166001600160a01b03848116918217845560405192169182907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a3505050565b6000807ff0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00610c38565b61112b6111b5565b610e91816111da565b6106496111b5565b611144610e94565b600080516020611811833981519152805460ff191660011781557f62e78cea01bee320cd4e420270b5ea74000d11b0c9f74754ebdbfc544b05a2583361106b565b6000805160206118118339815191525460ff1661064957604051638dfc202b60e01b815260040160405180910390fd5b6111bd6111e2565b61064957604051631afcd79f60e31b815260040160405180910390fd5b610e5e6111b5565b60006111ec6110fa565b54600160401b900460ff16919050565b60008083601f84011261120e57600080fd5b50813567ffffffffffffffff81111561122657600080fd5b60208301915083602082850101111561123e57600080fd5b9250929050565b60008060006040848603121561125a57600080fd5b83359250602084013567ffffffffffffffff81111561127857600080fd5b611284868287016111fc565b9497909650939450505050565b6000602082840312156112a357600080fd5b5035919050565b80356001600160a01b03811681146112c157600080fd5b919050565b600080604083850312156112d957600080fd5b823591506112e9602084016112aa565b90509250929050565b60008083601f84011261130457600080fd5b50813567ffffffffffffffff81111561131c57600080fd5b6020830191508360208260051b850101111561123e57600080fd5b60008060008060006060868803121561134f57600080fd5b85359450602086013567ffffffffffffffff8082111561136e57600080fd5b61137a89838a016111fc565b9096509450604088013591508082111561139357600080fd5b506113a0888289016112f2565b969995985093965092949392505050565b600060208083528351808285015260005b818110156113de578581018301518582016040015282016113c2565b506000604082860101526040601f19601f8301168501019250505092915050565b60008060006040848603121561141457600080fd5b83359250602084013567ffffffffffffffff81111561143257600080fd5b611284868287016112f2565b60006020828403121561145057600080fd5b611459826112aa565b9392505050565b602080825260139082015272119a5b1948191bd95cc81b9bdd08195e1a5cdd606a1b604082015260600190565b6020808252600c908201526b2737ba103ab83637b0b232b960a11b604082015260600190565b634e487b7160e01b600052604160045260246000fd5b600181811c908216806114dd57607f821691505b6020821081036114fd57634e487b7160e01b600052602260045260246000fd5b50919050565b601f8211156106b957600081815260208120601f850160051c8101602086101561152a5750805b601f850160051c820191505b8181101561154957828155600101611536565b505050505050565b67ffffffffffffffff831115611569576115696114b3565b61157d8361157783546114c9565b83611503565b6000601f8411600181146115b157600085156115995750838201355b600019600387901b1c1916600186901b178355610a84565b600083815260209020601f19861690835b828110156115e257868501358255602094850194600190920191016115c2565b50868210156115ff5760001960f88860031b161c19848701351681555b505060018560011b0183555050505050565b81835281816020850137506000828201602090810191909152601f909101601f19169091010190565b60208152600061164e602083018486611611565b949350505050565b6020808252600e908201526d546f6f206d616e7920757365727360901b604082015260600190565b634e487b7160e01b600052601160045260246000fd5b6000600182016116a6576116a661167e565b5060010190565b634e487b7160e01b600052603260045260246000fd5b6040815260006116d7604083018688611611565b8281036020848101919091528482528591810160005b86811015611719576001600160a01b03611706856112aa565b16825292820192908201906001016116ed565b5098975050505050505050565b815167ffffffffffffffff811115611740576117406114b3565b6117548161174e84546114c9565b84611503565b602080601f83116001811461178957600084156117715750858301515b600019600386901b1c1916600185901b178555611549565b600085815260208120601f198616915b828110156117b857888601518255948401946001909101908401611799565b50858210156117d65787850151600019600388901b60f8161c191681555b5050505050600190811b01905550565b6000816117f5576117f561167e565b506000190190565b80820180821115610c3857610c3861167e56fecd5ed15c6e187e77e9aee88184c21f4f2182ab5827cb3b7e07fbedcd63f03300a2646970667358221220ae93645665b0d465e071ae566126e121fdf5eed34cf21ea9f06e72079c4c93ab64736f6c63430008140033"
 }
