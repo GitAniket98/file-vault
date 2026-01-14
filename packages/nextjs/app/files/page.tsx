@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAccount } from "wagmi";
 import {
   ArrowDownTrayIcon,
+  ArrowRightIcon, // Added this
   CheckCircleIcon,
   ClockIcon,
   DocumentIcon,
@@ -17,6 +18,8 @@ import {
   UserGroupIcon,
 } from "@heroicons/react/24/outline";
 import AuditLogModal from "~~/components/AuditLogModal";
+import TransferOwnershipModal from "~~/components/TransferOwnershipModal";
+// Added this
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { hexToUint8 } from "~~/lib/bytes";
 import { loadDeviceKey } from "~~/lib/deviceKeys";
@@ -142,6 +145,14 @@ export default function FilesPage() {
   const [selectedFileHash, setSelectedFileHash] = useState("");
   const [selectedFilename, setSelectedFilename] = useState("");
 
+  // Transfer Ownership State
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [fileToTransfer, setFileToTransfer] = useState<{
+    fileHashHex: string;
+    filename: string;
+    currentOwner: string;
+  } | null>(null);
+
   const ipfsGatewayBase = "https://gateway.pinata.cloud/ipfs";
 
   useEffect(() => {
@@ -189,7 +200,20 @@ export default function FilesPage() {
     return /^0x[0-9a-fA-F]{64}$/.test(raw) ? (raw as `0x${string}`) : null;
   }
 
-  // ---- Logic: Delete File (New Feature) ----
+  // ---- Logic: Open Transfer Modal ----
+  const openTransferModal = (file: FileRow) => {
+    const fileHashHex = computeFileHashHex(file);
+    if (!fileHashHex) return notification.error("Invalid file hash");
+
+    setFileToTransfer({
+      fileHashHex,
+      filename: file.filename || "Untitled",
+      currentOwner: file.uploader_addr,
+    });
+    setTransferModalOpen(true);
+  };
+
+  // ---- Logic: Delete File ----
   async function handleDelete(file: FileRow) {
     if (!confirm("Are you sure? This will delete the file from the blockchain and storage.")) return;
 
@@ -199,15 +223,13 @@ export default function FilesPage() {
     try {
       setIsDeleting(file.id);
 
-      // 1. On-Chain Delete (The Source of Truth)
-      // This revokes access for everyone permanently.
+      // 1. On-Chain Delete
       await writeFileVault({
         functionName: "deleteFile",
         args: [fileHashHex],
       });
 
-      // 2. Off-Chain Cleanup (Database & IPFS)
-      // We call the API which will verify verifyOwner(fileHash) before deleting.
+      // 2. Off-Chain Cleanup
       const res = await fetch("/api/files/cleanup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -218,8 +240,6 @@ export default function FilesPage() {
       if (!res.ok || !json.ok) throw new Error(json.error || "Cleanup failed");
 
       notification.success("File deleted successfully");
-
-      // Remove from UI immediately
       setFiles(prev => prev.filter(f => f.id !== file.id));
     } catch (e: any) {
       console.error("Delete error:", e);
@@ -464,6 +484,12 @@ export default function FilesPage() {
                   <UserGroupIcon className="w-4 h-4" /> Access
                 </button>
                 <button
+                  onClick={() => openTransferModal(file)}
+                  className="btn btn-sm btn-ghost gap-2 hover:bg-accent/10 hover:text-accent transition-colors"
+                >
+                  <ArrowRightIcon className="w-4 h-4" /> Transfer
+                </button>
+                <button
                   onClick={() => {
                     setSelectedFileHash(file.file_hash);
                     setSelectedFilename(file.filename || "Untitled");
@@ -515,6 +541,9 @@ export default function FilesPage() {
                     </button>
                     <button onClick={() => openManageAccess(file)} className="btn btn-outline btn-sm w-full">
                       Manage Access
+                    </button>
+                    <button onClick={() => openTransferModal(file)} className="btn btn-outline btn-sm w-full">
+                      <ArrowRightIcon className="w-4 h-4" /> Transfer Ownership
                     </button>
                     <button
                       onClick={() => {
@@ -641,6 +670,25 @@ export default function FilesPage() {
         fileHashHex={selectedFileHash}
         filename={selectedFilename}
       />
+
+      {/* Transfer Ownership Modal */}
+      {fileToTransfer && (
+        <TransferOwnershipModal
+          isOpen={transferModalOpen}
+          onClose={() => {
+            setTransferModalOpen(false);
+            setFileToTransfer(null);
+          }}
+          fileHashHex={fileToTransfer.fileHashHex}
+          filename={fileToTransfer.filename}
+          currentOwner={fileToTransfer.currentOwner}
+          onSuccess={() => {
+            setTransferModalOpen(false);
+            setFileToTransfer(null);
+            fetchFiles(); // Refresh file list to remove transferred file
+          }}
+        />
+      )}
     </div>
   );
 }

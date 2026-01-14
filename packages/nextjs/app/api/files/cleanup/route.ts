@@ -53,12 +53,31 @@ export async function POST(req: NextRequest) {
 
   try {
     // 4. Authorization: ON-CHAIN & DB
-    // First, verify on-chain ownership if possible
-    const isOwner = await verifyOwner(fileHashHex, session.walletAddr);
+    let isOwner = false;
 
-    // Note: If the file was NEVER successfully committed to chain (upload failed midway),
-    // verifyOwner might return false or throw. In that cleanup case, we fallback to DB check.
+    // --- UPDATED LOGIC START ---
+    try {
+      // First, try to verify on-chain ownership
+      isOwner = await verifyOwner(fileHashHex, session.walletAddr);
+    } catch (e: any) {
+      // If the file was just deleted on-chain by the frontend, the contract calls revert
+      // with "File does not exist". We must catch this specific case.
+      const isFileDeletedError =
+        e.message?.includes("File does not exist") ||
+        e.shortMessage?.includes("File does not exist") ||
+        e.reason?.includes("File does not exist");
 
+      if (isFileDeletedError) {
+        // This is expected during cleanup. We will rely on the DB check (isDbOwner) below.
+        isOwner = false;
+      } else {
+        // Real network/contract error? Re-throw it.
+        throw e;
+      }
+    }
+    // --- UPDATED LOGIC END ---
+
+    // Fetch the file record to verify DB ownership
     const { data: file } = await supabase
       .from("File")
       .select("id,uploader_addr,cid")
@@ -72,6 +91,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Strict Check: DB Owner OR Chain Owner must match
+    // If it was deleted on-chain (isOwner=false), this check ensures only the
+    // original uploader (stored in DB) can remove the DB record.
     const isDbOwner = file.uploader_addr?.toLowerCase() === session.walletAddr.toLowerCase();
 
     if (!isDbOwner && !isOwner) {
@@ -81,6 +102,7 @@ export async function POST(req: NextRequest) {
     const cid = body.cid || file.cid;
 
     // 5. Cleanup
+    // Remove Recipients (WrappedKeys) and the File record itself
     await supabase.from("WrappedKey").delete().eq("file_hash", fileHashBytea);
     await supabase.from("File").delete().eq("id", file.id);
     await pinataUnpinCid(cid);
