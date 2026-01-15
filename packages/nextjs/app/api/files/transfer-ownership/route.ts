@@ -93,36 +93,49 @@ export async function POST(req: NextRequest) {
     const supabase = createSupabaseServerClient(token);
     const fileHashBytea = toPgByteaLiteral(fileHashHex);
 
-    // 6. Resolve New Owner's DID (Important for DB consistency)
-    // We try to find if the new owner has an account in our system
+    // --- FIX START ---
+
+    // 6. Pre-Check: Verify the file exists (we do this BEFORE update)
+    const { data: existingFile } = await supabase
+      .from("File")
+      .select("id")
+      .eq("file_hash", fileHashBytea)
+      .maybeSingle();
+
+    if (!existingFile) {
+      // If it's not found here, it's genuinely missing or not owned by user
+      return NextResponse.json({ ok: false, error: "File not found in DB" }, { status: 404 });
+    }
+
+    // 7. Resolve New Owner's DID
     const { data: newOwnerUser } = await supabase
       .from("User")
       .select("did")
       .ilike("wallet_addr", normalizedNewOwner)
       .maybeSingle();
 
-    const newOwnerDid = newOwnerUser?.did || null; // Might be null if they haven't registered yet
+    const newOwnerDid = newOwnerUser?.did || null;
 
-    // 7. Update Database Ownership
-    const { data: file, error: updateError } = await supabase
+    // We update without asking for the row back, because RLS prevents us from seeing it
+    // once we transfer it away.
+    const { error: updateError } = await supabase
       .from("File")
       .update({
         uploader_addr: normalizedNewOwner,
-        uploader_did: newOwnerDid, // Update DID if found, otherwise set null (or keep old? usually null is safer)
+        uploader_did: newOwnerDid,
       })
-      .eq("file_hash", fileHashBytea)
-      .select()
-      .maybeSingle();
+      .eq("file_hash", fileHashBytea);
 
     if (updateError) throw new Error(updateError.message);
-    if (!file) return NextResponse.json({ ok: false, error: "File not found in DB" }, { status: 404 });
 
-    // 8. Audit Log
+    // --- FIX END ---
+
+    // 9. Audit Log
     await logFileAction({
       action: AuditAction.FILE_OWNERSHIP_TRANSFER,
       fileHashHex,
       actorDid: session.did,
-      actorAddr: session.walletAddr, // The OLD owner performed the action
+      actorAddr: session.walletAddr,
       metadata: {
         previousOwner: normalizedCurrentOwner,
         newOwner: normalizedNewOwner,
@@ -132,7 +145,7 @@ export async function POST(req: NextRequest) {
       success: true,
     });
 
-    console.log(`[transfer-ownership]  SUCCESS: Transferred to ${normalizedNewOwner}`);
+    console.log(`[transfer-ownership] ✅ SUCCESS: Transferred to ${normalizedNewOwner}`);
 
     return NextResponse.json({
       ok: true,
