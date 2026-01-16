@@ -148,7 +148,7 @@ export default function FilesPage() {
   // Transfer Ownership State
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [fileToTransfer, setFileToTransfer] = useState<{
-    fileHashHex: string;
+    fileHashHex: `0x${string}`;
     filename: string;
     currentOwner: string;
   } | null>(null);
