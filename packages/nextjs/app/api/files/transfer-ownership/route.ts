@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
       success: true,
     });
 
-    console.log(`[transfer-ownership] ✅ SUCCESS: Transferred to ${normalizedNewOwner}`);
+    console.log(`[transfer-ownership] SUCCESS: Transferred to ${normalizedNewOwner}`);
     return NextResponse.json({ ok: true, message: "File ownership transferred successfully" });
   } catch (e: any) {
     console.error("[transfer-ownership] Error:", e);

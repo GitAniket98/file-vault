@@ -1,4 +1,3 @@
-// packages/nextjs/app/upload/page.tsx
 "use client";
 
 import React, { CSSProperties, useCallback, useEffect, useState } from "react";
@@ -19,26 +18,6 @@ import { type RecipientUser, wrapAesKeyForRecipients } from "~~/lib/wrapKeys";
 import { aesEncryptFile, sha256Hex, uint8ToBlob } from "~~/utils/crypto";
 import { pinBlobToIPFS } from "~~/utils/ipfs";
 import { notification } from "~~/utils/scaffold-eth";
-
-// packages/nextjs/app/upload/page.tsx
-
-// packages/nextjs/app/upload/page.tsx
-
-// packages/nextjs/app/upload/page.tsx
-
-// packages/nextjs/app/upload/page.tsx
-
-// packages/nextjs/app/upload/page.tsx
-
-// packages/nextjs/app/upload/page.tsx
-
-// packages/nextjs/app/upload/page.tsx
-
-// packages/nextjs/app/upload/page.tsx
-
-// packages/nextjs/app/upload/page.tsx
-
-// packages/nextjs/app/upload/page.tsx
 
 // --- Types ---
 

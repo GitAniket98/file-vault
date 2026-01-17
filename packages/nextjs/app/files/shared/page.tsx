@@ -1,4 +1,3 @@
-// packages/nextjs/app/files/shared/page.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -15,26 +14,6 @@ import {
 } from "@heroicons/react/24/outline";
 import { decryptFileFromIpfs, unwrapFileAesKeyForRecipient } from "~~/lib/recipientDecrypt";
 import { notification } from "~~/utils/scaffold-eth";
-
-// packages/nextjs/app/files/shared/page.tsx
-
-// packages/nextjs/app/files/shared/page.tsx
-
-// packages/nextjs/app/files/shared/page.tsx
-
-// packages/nextjs/app/files/shared/page.tsx
-
-// packages/nextjs/app/files/shared/page.tsx
-
-// packages/nextjs/app/files/shared/page.tsx
-
-// packages/nextjs/app/files/shared/page.tsx
-
-// packages/nextjs/app/files/shared/page.tsx
-
-// packages/nextjs/app/files/shared/page.tsx
-
-// packages/nextjs/app/files/shared/page.tsx
 
 // --- Types ---
 
@@ -62,7 +41,7 @@ export default function FilesSharedWithMePage() {
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  // Fetch files on load (and when wallet changes)
+  // Fetch files on load
   useEffect(() => {
     setRows([]);
     if (isConnected && address) fetchSharedFiles();
@@ -81,7 +60,7 @@ export default function FilesSharedWithMePage() {
         throw new Error("Wallet mismatch. Please login via Overview.");
       }
 
-      // 2. Fetch Data (Files shared with MY DID - blockchain verified)
+      // 2. Fetch Data
       const res = await fetch("/api/files/for-recipient", {
         method: "POST",
       });

@@ -1,4 +1,3 @@
-// packages/nextjs/app/register/page.tsx
 "use client";
 
 import React, { useRef, useState } from "react";
@@ -12,26 +11,6 @@ import {
   importDeviceEncKeyRecord,
 } from "~~/lib/deviceEncKeys";
 import { notification } from "~~/utils/scaffold-eth";
-
-// packages/nextjs/app/register/page.tsx
-
-// packages/nextjs/app/register/page.tsx
-
-// packages/nextjs/app/register/page.tsx
-
-// packages/nextjs/app/register/page.tsx
-
-// packages/nextjs/app/register/page.tsx
-
-// packages/nextjs/app/register/page.tsx
-
-// packages/nextjs/app/register/page.tsx
-
-// packages/nextjs/app/register/page.tsx
-
-// packages/nextjs/app/register/page.tsx
-
-// packages/nextjs/app/register/page.tsx
 
 // UI States for the registration flow
 type Step = "idle" | "authenticating" | "generating_keys" | "registering" | "success" | "error";

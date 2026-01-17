@@ -26,7 +26,6 @@ type ApiOk = {
   files: FileRow[];
 };
 
-// ⭐ ADD THIS HELPER
 function toHex(bytea: string | null): string | null {
   if (!bytea) return null;
   return bytea.startsWith("\\x") ? "0x" + bytea.slice(2) : bytea;
@@ -68,7 +67,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Database query failed" }, { status: 500 });
     }
 
-    // ⭐⭐⭐ ADD THIS SECTION - Blockchain Verification ⭐⭐⭐
     const verifiedFiles: FileRow[] = [];
 
     for (const file of data ?? []) {
@@ -79,12 +77,12 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
-      // 🔐 SECURITY: Verify ownership on blockchain
+      // Verify ownership on blockchain
       const isOwner = await verifyOwner(fileHashHex, walletAddr);
 
       if (!isOwner) {
         console.warn(
-          `[by-uploader] ⚠️ File ${fileHashHex.slice(0, 10)}... in database ` +
+          `[by-uploader] File ${fileHashHex.slice(0, 10)}... in database ` +
             `but NOT owned by ${walletAddr} on blockchain. Filtering out.`,
         );
         continue; // Skip files not owned on blockchain
@@ -94,15 +92,14 @@ export async function GET(req: NextRequest) {
     }
 
     console.log(
-      `[by-uploader] ✅ Returned ${verifiedFiles.length}/${data?.length ?? 0} files ` +
+      `[by-uploader] Returned ${verifiedFiles.length}/${data?.length ?? 0} files ` +
         `(filtered by blockchain ownership)`,
     );
 
     return NextResponse.json<ApiOk>({
       ok: true,
-      files: verifiedFiles, // ⭐ Return verified files only
+      files: verifiedFiles,
     });
-    // ⭐⭐⭐ END OF NEW SECTION ⭐⭐⭐
   } catch (e: any) {
     if (e instanceof Response) return e;
     return NextResponse.json({ ok: false, error: "Internal error" }, { status: 500 });

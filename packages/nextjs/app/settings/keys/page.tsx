@@ -1,4 +1,3 @@
-// packages/nextjs/app/settings/keys/page.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -13,26 +12,6 @@ import {
 import { DeviceEncKeyRecord, exportDeviceEncKeyRecord, importDeviceEncKeyRecord } from "~~/lib/deviceEncKeys";
 import { getAllKeysForUser, importBulkKeys } from "~~/lib/deviceKeys";
 import { notification } from "~~/utils/scaffold-eth";
-
-// packages/nextjs/app/settings/keys/page.tsx
-
-// packages/nextjs/app/settings/keys/page.tsx
-
-// packages/nextjs/app/settings/keys/page.tsx
-
-// packages/nextjs/app/settings/keys/page.tsx
-
-// packages/nextjs/app/settings/keys/page.tsx
-
-// packages/nextjs/app/settings/keys/page.tsx
-
-// packages/nextjs/app/settings/keys/page.tsx
-
-// packages/nextjs/app/settings/keys/page.tsx
-
-// packages/nextjs/app/settings/keys/page.tsx
-
-// packages/nextjs/app/settings/keys/page.tsx
 
 type Step = "idle" | "exporting" | "importing";
 

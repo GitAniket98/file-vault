@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
     if (!isOwner) {
       console.error(
-        `[wrap-keys] ❌ SECURITY: User ${session.walletAddr} attempted to wrap keys for file ${fileHashHex.slice(0, 10)}... ` +
+        `[wrap-keys] SECURITY: User ${session.walletAddr} attempted to wrap keys for file ${fileHashHex.slice(0, 10)}... ` +
           `but is NOT the on-chain owner.`,
       );
       return NextResponse.json(
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(
-      `[wrap-keys] ✅ SUCCESS: User ${session.walletAddr} granted access to ${rows.length} recipients ` +
+      `[wrap-keys] SUCCESS: User ${session.walletAddr} granted access to ${rows.length} recipients ` +
         `for file ${fileHashHex.slice(0, 10)}...`,
     );
 
