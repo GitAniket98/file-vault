@@ -28,7 +28,6 @@ type Body = {
   newEncryptedKey?: WrappedKeyPayload;
 };
 
-// FIX: Removed unused 'req' parameter
 export async function GET() {
   return NextResponse.json({ ok: true, message: "Transfer API is working" });
 }
@@ -108,8 +107,8 @@ export async function POST(req: NextRequest) {
       const { error: keyError } = await supabase.from("WrappedKey").upsert({
         file_hash: fileHashBytea,
         recipient_did: newOwnerDid,
-        encrypted_key: toPgByteaLiteral(newEncryptedKey.wrappedKeyHex),
-        iv: toPgByteaLiteral(newEncryptedKey.ephemeralPubHex),
+        wrapped_key: toPgByteaLiteral(newEncryptedKey.wrappedKeyHex),
+        ephemeral_pub: toPgByteaLiteral(newEncryptedKey.ephemeralPubHex),
       });
 
       if (keyError) console.error("Key rotation error:", keyError);
