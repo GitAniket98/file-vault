@@ -1,58 +1,103 @@
-// packages/nextjs/lib/ipfsServer.ts
+import dns from "node:dns";
+import "server-only";
 
-/**
- * @module ipfsServer
- * @description
- * Server-side utilities for interacting with Pinata (IPFS).
- *
- * ⚠️ SECURITY NOTE:
- * This file must ONLY be imported by Server Components or API Routes.
- * It accesses `process.env.PINATA_JWT`, which is a secret key.
- * Importing this into a Client Component ("use client") will leak credentials to the browser bundle.
- */
+try {
+  if (dns.setDefaultResultOrder) {
+    dns.setDefaultResultOrder("ipv4first");
+  }
+} catch (e) {
+  // Ignore
+}
 
 const PINATA_UNPIN_ENDPOINT = "https://api.pinata.cloud/pinning/unpin";
+const MAX_RETRIES = 3;
+const INITIAL_TIMEOUT_MS = 10000; // Increased to 10s
 
 /**
- * Best-effort attempt to unpin a CID from Pinata.
- *
- * Design Pattern: "Fire-and-Forget" / "Compensating Transaction"
- * - Used during rollback scenarios (e.g., DB write failed, so we undo the IPFS pin).
- * - Intentionally swallows all errors to ensure the parent request (user's response)
- * does not fail just because a cleanup task failed.
- * - Logs failures to stdout/stderr so they can be alerted on (e.g., via Datadog/Sentry).
- *
- * @param cid - The IPFS Content Identifier to remove. If null/empty, performs no-op.
+ * Helper: Sleep for a given duration
  */
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export async function pinataUnpinCid(cid: string | null | undefined): Promise<void> {
   const targetCid = cid?.trim();
-  // Optimization: fast exit for empty inputs
   if (!targetCid) return;
 
-  // Prioritize a dedicated server key if available, falling back to the general key.
-  const jwt = process.env.PINATA_JWT_SERVER || process.env.PINATA_JWT;
+  const rawJwt = process.env.PINATA_JWT_SERVER || process.env.PINATA_JWT;
+  const jwt = rawJwt ? rawJwt.trim() : "";
 
   if (!jwt) {
-    // Operational Alert: This indicates a misconfiguration in the deployment environment.
-    console.warn("[ipfsServer] Skipped unpin: Missing PINATA_JWT environment variable.");
+    console.warn("[ipfsServer] Skipped unpin: Missing PINATA_JWT.");
     return;
   }
 
-  try {
-    const res = await fetch(`${PINATA_UNPIN_ENDPOINT}/${encodeURIComponent(targetCid)}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${jwt}`,
-      },
-    });
+  const url = `${PINATA_UNPIN_ENDPOINT}/${targetCid}`;
+  let lastError: any = null;
 
-    if (!res.ok) {
-      // We read the body to log the specific error from Pinata (e.g., "CID not found" vs "Unauthorized")
-      const text = await res.text().catch(() => "No response body");
-      console.warn(`[ipfsServer] Unpin warning for CID ${targetCid}: ${res.status} ${res.statusText} - ${text}`);
+  // 2. RETRY LOOP
+  // We try up to MAX_RETRIES times before giving up.
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      if (attempt > 1) {
+        console.log(`[ipfsServer] Retry ${attempt}/${MAX_RETRIES} for ${targetCid}...`);
+      }
+
+      const controller = new AbortController();
+      // Increase timeout slightly on each retry
+      const timeoutMs = INITIAL_TIMEOUT_MS + attempt * 2000;
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+      const res = await fetch(url, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${jwt}` },
+        signal: controller.signal,
+        // 'duplex: half' can sometimes fix vague Node.js fetch hangs
+        // @ts-ignore - Typescript might complain on older lib versions, but it's valid valid in Node 18+
+        duplex: "half",
+      });
+
+      clearTimeout(timeoutId);
+
+      // Handle Success
+      if (res.ok) {
+        console.log(`[ipfsServer] ✅ Unpinned ${targetCid}`);
+        return; // Exit function on success
+      }
+
+      // Handle 404 (Success)
+      if (res.status === 404) {
+        return;
+      }
+
+      // Handle other API errors (don't retry 401/403 as those are config errors)
+      if (res.status === 401 || res.status === 403) {
+        console.error(`[ipfsServer] Auth Error (${res.status}). Check JWT.`);
+        return;
+      }
+
+      // If 5xx error, we throw to trigger a retry
+      if (res.status >= 500) {
+        throw new Error(`Server Error ${res.status}`);
+      }
+
+      const text = await res.text().catch(() => "");
+      console.warn(`[ipfsServer] Unpin warning: ${res.status} - ${text}`);
+      return; // Don't retry client errors (400s)
+    } catch (e: any) {
+      lastError = e;
+      const isTimeout = e.name === "AbortError" || e.code === "ETIMEDOUT";
+
+      // Only retry on network errors or timeouts
+      if (attempt < MAX_RETRIES) {
+        // Wait 1s, 2s, 3s... (Exponential Backoff)
+        await delay(1000 * attempt);
+      }
     }
-  } catch (e: any) {
-    // Catch network errors (DNS, timeout) so the main thread continues.
-    console.error("[ipfsServer] Unpin network error:", e?.message || e);
   }
+
+  // 3. FINAL FAILURE LOG
+  // If we exhaust all retries, we log it but do NOT crash the app.
+  console.error(
+    `[ipfsServer] Failed to unpin ${targetCid} after ${MAX_RETRIES} attempts. Last error:`,
+    lastError?.message || lastError,
+  );
 }

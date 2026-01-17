@@ -52,61 +52,67 @@ export async function POST(req: NextRequest) {
   const fileHashBytea = toPgByteaLiteral(fileHashHex);
 
   try {
-    // 4. Authorization: ON-CHAIN & DB
-    let isOwner = false;
-
-    // --- UPDATED LOGIC START ---
-    try {
-      // First, try to verify on-chain ownership
-      isOwner = await verifyOwner(fileHashHex, session.walletAddr);
-    } catch (e: any) {
-      // If the file was just deleted on-chain by the frontend, the contract calls revert
-      // with "File does not exist". We must catch this specific case.
-      const isFileDeletedError =
-        e.message?.includes("File does not exist") ||
-        e.shortMessage?.includes("File does not exist") ||
-        e.reason?.includes("File does not exist");
-
-      if (isFileDeletedError) {
-        // This is expected during cleanup. We will rely on the DB check (isDbOwner) below.
-        isOwner = false;
-      } else {
-        // Real network/contract error? Re-throw it.
-        throw e;
-      }
-    }
-    // --- UPDATED LOGIC END ---
-
-    // Fetch the file record to verify DB ownership
+    // 1. Fetch DB Record FIRST (Fix for "File does not exist" error)
+    // We check the DB first because the file might already be deleted on-chain.
     const { data: file } = await supabase
       .from("File")
       .select("id,uploader_addr,cid")
       .eq("file_hash", fileHashBytea)
       .maybeSingle();
 
+    // 2. Handle Idempotency (Already deleted)
     if (!file) {
-      // Not in DB? Just unpin from IPFS to be clean.
       await pinataUnpinCid(body.cid ?? null);
-      return NextResponse.json({ ok: true, cleaned: false });
+      return NextResponse.json({ ok: true, cleaned: false, message: "File already removed from DB" });
     }
 
-    // Strict Check: DB Owner OR Chain Owner must match
-    // If it was deleted on-chain (isOwner=false), this check ensures only the
-    // original uploader (stored in DB) can remove the DB record.
-    const isDbOwner = file.uploader_addr?.toLowerCase() === session.walletAddr.toLowerCase();
+    // 3. Authorization Logic
+    let isAuthorized = false;
 
-    if (!isDbOwner && !isOwner) {
-      return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+    // Check A: Are you the DB Owner? (Primary Check)
+    // If this passes, we skip the blockchain call entirely, preventing the crash.
+    if (file.uploader_addr?.toLowerCase() === session.walletAddr.toLowerCase()) {
+      isAuthorized = true;
     }
 
+    // Check B: Fallback to Chain (Only if DB check fails)
+    // Useful if ownership transferred on-chain but DB is stale.
+    if (!isAuthorized) {
+      try {
+        isAuthorized = await verifyOwner(fileHashHex, session.walletAddr);
+      } catch (e: any) {
+        // If contract reverts with "File does not exist", it means it's gone from chain.
+        // Since the user failed Check A (DB) and the file is gone (Chain), they are forbidden.
+        console.warn(`[cleanup] Chain verify failed (expected if deleted): ${e.message}`);
+        isAuthorized = false;
+      }
+    }
+
+    if (!isAuthorized) {
+      return NextResponse.json({ ok: false, error: "Forbidden: You do not own this file" }, { status: 403 });
+    }
+
+    // 4. Cleanup Execution
     const cid = body.cid || file.cid;
 
-    // 5. Cleanup
-    // Remove Recipients (WrappedKeys) and the File record itself
+    // Delete keys first (Foreign Key constraint usually requires this or CASCADE)
     await supabase.from("WrappedKey").delete().eq("file_hash", fileHashBytea);
-    await supabase.from("File").delete().eq("id", file.id);
-    await pinataUnpinCid(cid);
 
+    // Delete File record
+    const { error: deleteError } = await supabase.from("File").delete().eq("id", file.id);
+
+    if (deleteError) {
+      throw new Error(`DB Delete Failed: ${deleteError.message}`);
+    }
+
+    // Unpin from IPFS
+    try {
+      await pinataUnpinCid(cid);
+    } catch (ipfsError) {
+      console.warn("[cleanup] IPFS unpin failed, but DB cleared:", ipfsError);
+    }
+
+    // 5. Audit Log
     await logFileAction({
       action: AuditAction.FILE_DELETE,
       fileHashHex,
@@ -123,6 +129,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, cleaned: true });
   } catch (e: any) {
     console.error("[files/cleanup] Unexpected error:", e);
-    return NextResponse.json({ ok: false, error: "Internal Error" }, { status: 500 });
+    return NextResponse.json({ ok: false, error: e.message || "Internal Error" }, { status: 500 });
   }
 }
