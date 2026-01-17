@@ -1,4 +1,3 @@
-// /packages/nextjs/app/files/page.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -6,7 +5,7 @@ import Link from "next/link";
 import { useAccount } from "wagmi";
 import {
   ArrowDownTrayIcon,
-  ArrowRightIcon, // Added this
+  ArrowRightIcon,
   CheckCircleIcon,
   ClockIcon,
   DocumentIcon,
@@ -22,30 +21,11 @@ import TransferOwnershipModal from "~~/components/TransferOwnershipModal";
 // Added this
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { hexToUint8 } from "~~/lib/bytes";
-import { loadDeviceKey } from "~~/lib/deviceKeys";
+import { loadDeviceKey, saveDeviceKey } from "~~/lib/deviceKeys";
+import { unwrapFileAesKeyForRecipient } from "~~/lib/recipientDecrypt";
 import { type RecipientUser, wrapAesKeyForRecipients } from "~~/lib/wrapKeys";
 import { aesDecryptToBlob } from "~~/utils/crypto";
 import { notification } from "~~/utils/scaffold-eth";
-
-// /packages/nextjs/app/files/page.tsx
-
-// /packages/nextjs/app/files/page.tsx
-
-// /packages/nextjs/app/files/page.tsx
-
-// /packages/nextjs/app/files/page.tsx
-
-// /packages/nextjs/app/files/page.tsx
-
-// /packages/nextjs/app/files/page.tsx
-
-// /packages/nextjs/app/files/page.tsx
-
-// /packages/nextjs/app/files/page.tsx
-
-// /packages/nextjs/app/files/page.tsx
-
-// /packages/nextjs/app/files/page.tsx
 
 // --- Types ---
 type FileRow = {
@@ -250,6 +230,7 @@ export default function FilesPage() {
   }
 
   // ---- Logic: Client-Side Decryption ----
+
   async function handleDecrypt(file: FileRow) {
     if (!address) return;
     try {
@@ -257,19 +238,85 @@ export default function FilesPage() {
       const fileHashHex = computeFileHashHex(file);
       if (!fileHashHex) throw new Error("Invalid hash");
 
-      const keyRec = await loadDeviceKey(address, fileHashHex);
+      // --- HELPER: Normalize ALL Postgres Hex strings (\x -> 0x) ---
+      const cleanHex = (h: string | null) => {
+        if (!h) return "";
+        return h.startsWith("\\x") ? "0x" + h.slice(2) : h;
+      };
+
+      // 1. Try Local Load
+      let keyRec = await loadDeviceKey(address, fileHashHex);
+
+      // 2. If missing, SYNC from Server
       if (!keyRec) {
-        notification.error("No local encryption key found on this device.");
+        const toastId = notification.loading("Syncing owner key...");
+
+        try {
+          // A. Fetch Wrapped Key from API
+          const keyRes = await fetch(`/api/files/wrapped-key?fileHashHex=${fileHashHex}`);
+          const keyJson = await keyRes.json();
+
+          if (!keyRes.ok || !keyJson.ok) {
+            throw new Error("Key sync failed: Key not found on server.");
+          }
+
+          // B. Normalize API Inputs
+          const wrappedKeyHex = cleanHex(keyJson.encryptedKeyHex);
+          const ephemeralPubHex = cleanHex(keyJson.ivHex);
+
+          // C. Unwrap Locally (Client-Side ECDH)
+          const rawAesKeyBytes = await unwrapFileAesKeyForRecipient(address, wrappedKeyHex, ephemeralPubHex);
+
+          if (!rawAesKeyBytes) throw new Error("Failed to unwrap encryption key.");
+
+          // D. Convert Bytes to Hex for Storage
+          const rawKeyHex =
+            "0x" +
+            Array.from(rawAesKeyBytes)
+              .map(b => b.toString(16).padStart(2, "0"))
+              .join("");
+
+          // E. Save to Local Storage
+
+          await saveDeviceKey(address, fileHashHex, {
+            rawKeyHex: rawKeyHex as `0x${string}`,
+            ivHex: cleanHex(file.iv) as `0x${string}`,
+          });
+
+          // F. Reload
+          keyRec = await loadDeviceKey(address, fileHashHex);
+
+          notification.remove(toastId);
+          notification.success("Key synced & saved to device!");
+        } catch (err: any) {
+          notification.remove(toastId);
+          console.error("Key sync failed:", err);
+          let msg = err?.message || "Sync failed";
+          if (msg.includes("OperationError") || msg.includes("InvalidAccessError")) {
+            msg = "Could not unwrap key. Ensure you are logged in with the correct Identity Keys.";
+          }
+          throw new Error(msg);
+        }
+      }
+
+      if (!keyRec) {
+        notification.error("No local encryption key found.");
         return;
       }
 
-      const toastId = notification.loading("Fetching & Decrypting...");
+      // 3. Decrypt File Content
+      const toastId = notification.loading("Downloading & Decrypting...");
       const res = await fetch(`${ipfsGatewayBase}/${file.cid}`);
       if (!res.ok) throw new Error("IPFS fetch failed");
       const ciphertext = new Uint8Array(await res.arrayBuffer());
 
       const mimeType = file.mime_type || "application/octet-stream";
-      const blob = await aesDecryptToBlob(ciphertext, hexToUint8(keyRec.ivHex), hexToUint8(keyRec.rawKeyHex), mimeType);
+
+      // Ensure local keys are also clean (just in case)
+      const finalIv = cleanHex(keyRec.ivHex);
+      const finalKey = cleanHex(keyRec.rawKeyHex);
+
+      const blob = await aesDecryptToBlob(ciphertext, hexToUint8(finalIv), hexToUint8(finalKey), mimeType);
 
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
