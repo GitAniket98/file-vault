@@ -132,11 +132,23 @@ contract FileVault is Initializable, OwnableUpgradeable, PausableUpgradeable {
         require(newOwner != address(0), "Invalid new owner address");
         require(newOwner != msg.sender, "Already the owner");
 
-        address previousOwner = files[fileHash].uploader;
-        files[fileHash].uploader = newOwner;
+        File storage f = files[fileHash];
+        address previousOwner = f.uploader;
+
+        // Revoke previous owner's access before transferring
+        if (f.authorizedVersion[previousOwner] == f.version) {
+            f.authorizedVersion[previousOwner] = 0;
+            // Use explicit error instead of silent check
+            require(f.userCount > 0, "User count already zero");
+            f.userCount--;
+            emit AccessRevoked(fileHash, previousOwner);
+        }
+
+        // Transfer ownership
+        f.uploader = newOwner;
 
         // Automatically grant access to new owner
-        _grantAccessInternal(files[fileHash], fileHash, newOwner);
+        _grantAccessInternal(f, fileHash, newOwner);
 
         emit FileOwnershipTransferred(fileHash, previousOwner, newOwner);
     }
@@ -159,7 +171,10 @@ contract FileVault is Initializable, OwnableUpgradeable, PausableUpgradeable {
         File storage f = files[fileHash];
         require(f.exists, "File does not exist");
         require(f.uploader == msg.sender, "Not uploader");
-        require(f.userCount + users.length <= MAX_ALLOWED_USERS, "Too many users");
+
+        // This was vulnerable because _grantAccessInternal could skip users that already
+        // have access, allowing the limit to be bypassed. Now each call to
+        // _grantAccessInternal enforces the limit individually.
 
         for (uint256 i = 0; i < users.length; i++) {
             _grantAccessInternal(f, fileHash, users[i]);
@@ -174,11 +189,15 @@ contract FileVault is Initializable, OwnableUpgradeable, PausableUpgradeable {
         require(f.exists, "File does not exist");
         require(f.uploader == msg.sender, "Not uploader");
         require(user != address(0), "Invalid user address");
+        require(user != msg.sender, "Cannot revoke own access"); // FIX #2
 
         // Only revoke if they actually have the CURRENT version
         if (f.authorizedVersion[user] == f.version) {
             f.authorizedVersion[user] = 0; // Revoke by setting to 0
-            if (f.userCount > 0) f.userCount--;
+
+            require(f.userCount > 0, "User count already zero");
+            f.userCount--;
+
             emit AccessRevoked(fileHash, user);
         }
     }
@@ -244,6 +263,14 @@ contract FileVault is Initializable, OwnableUpgradeable, PausableUpgradeable {
     /// @return bool True if file exists, false otherwise
     function fileExists(bytes32 fileHash) external view returns (bool) {
         return files[fileHash].exists;
+    }
+
+    /// @notice Get the current user count for a file (for testing/debugging)
+    /// @param fileHash SHA-256 hash of the file
+    /// @return uint256 Current number of authorized users
+    function getUserCount(bytes32 fileHash) external view returns (uint256) {
+        require(files[fileHash].exists, "File does not exist");
+        return files[fileHash].userCount;
     }
 
     /**

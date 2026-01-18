@@ -10,7 +10,7 @@ const deployFileVault: DeployFunction = async function (hre: HardhatRuntimeEnvir
   const { save, log } = hre.deployments; // Import 'save' to manually update frontend info
 
   log("----------------------------------------------------");
-  log("📦 Deploying FileVault (Proxy + Implementation)...");
+  log("Deploying FileVault (Proxy + Implementation)...");
 
   // 1. Get the Contract Factory
   const FileVaultFactory = await ethers.getContractFactory("FileVault");
@@ -24,7 +24,7 @@ const deployFileVault: DeployFunction = async function (hre: HardhatRuntimeEnvir
   await proxy.waitForDeployment();
   const proxyAddress = await proxy.getAddress();
 
-  log(`✅ FileVault Proxy deployed at: ${proxyAddress}`);
+  log(`FileVault Proxy deployed at: ${proxyAddress}`);
 
   // 3. CRITICAL: Save artifact for hardhat-deploy / Frontend
   // This ensures your Next.js app knows the Proxy Address but uses the Implementation ABI
@@ -36,7 +36,7 @@ const deployFileVault: DeployFunction = async function (hre: HardhatRuntimeEnvir
     bytecode: artifact.bytecode,
   });
 
-  log("💾 Artifact saved for Frontend integration");
+  log("Artifact saved for Frontend integration");
   log("----------------------------------------------------");
 };
 

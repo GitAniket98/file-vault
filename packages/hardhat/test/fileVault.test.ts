@@ -9,6 +9,7 @@ describe("FileVault v2 (Upgradeable) Tests", function () {
   let uploader: HardhatEthersSigner;
   let userA: HardhatEthersSigner;
   let userB: HardhatEthersSigner;
+  let userC: HardhatEthersSigner;
   let attacker: HardhatEthersSigner;
 
   const fileHash = "0x" + "a".repeat(64);
@@ -16,7 +17,7 @@ describe("FileVault v2 (Upgradeable) Tests", function () {
   const newCid = "QmUpdatedCid987654321";
 
   beforeEach(async () => {
-    [uploader, userA, userB, attacker] = await ethers.getSigners();
+    [uploader, userA, userB, userC, attacker] = await ethers.getSigners();
     const FileVaultFactory = await ethers.getContractFactory("FileVault");
     fileVault = (await upgrades.deployProxy(FileVaultFactory, [], {
       initializer: "initialize",
@@ -31,6 +32,7 @@ describe("FileVault v2 (Upgradeable) Tests", function () {
       expect(await fileVault.getUploader(fileHash)).to.equal(uploader.address);
       expect(await fileVault.isAuthorized(fileHash, uploader.address)).to.be.true;
       expect(await fileVault.connect(uploader).getCid(fileHash)).to.equal(cid);
+      expect(await fileVault.getUserCount(fileHash)).to.equal(1);
     });
 
     it("Should authorize initial batch of users on upload", async function () {
@@ -39,6 +41,7 @@ describe("FileVault v2 (Upgradeable) Tests", function () {
 
       expect(await fileVault.isAuthorized(fileHash, userA.address)).to.be.true;
       expect(await fileVault.isAuthorized(fileHash, userB.address)).to.be.true;
+      expect(await fileVault.getUserCount(fileHash)).to.equal(3); // uploader + userA + userB
     });
 
     it("Should fail if CID is empty", async function () {
@@ -78,6 +81,7 @@ describe("FileVault v2 (Upgradeable) Tests", function () {
       await fileVault.connect(uploader).grantAccessBatch(fileHash, users);
       expect(await fileVault.isAuthorized(fileHash, userA.address)).to.be.true;
       expect(await fileVault.isAuthorized(fileHash, userB.address)).to.be.true;
+      expect(await fileVault.getUserCount(fileHash)).to.equal(3);
     });
 
     it("Should preventing non-uploaders from granting access", async function () {
@@ -93,13 +97,12 @@ describe("FileVault v2 (Upgradeable) Tests", function () {
     });
   });
 
-  describe("3. Ownership Transfer", function () {
+  describe("3. File Ownership Transfer", function () {
     beforeEach(async () => {
       await fileVault.connect(uploader).storeFileHash(fileHash, cid, []);
     });
 
     it("Should transfer ownership and auto-grant access to new owner", async function () {
-      // UPDATED: Using the new function name
       await expect(fileVault.connect(uploader).transferFileOwnership(fileHash, userA.address))
         .to.emit(fileVault, "FileOwnershipTransferred")
         .withArgs(fileHash, uploader.address, userA.address);
@@ -109,13 +112,24 @@ describe("FileVault v2 (Upgradeable) Tests", function () {
     });
 
     it("Should allow NEW owner to grant access", async function () {
-      // UPDATED: Using the new function name
       await fileVault.connect(uploader).transferFileOwnership(fileHash, userA.address);
 
       await expect(fileVault.connect(uploader).grantAccess(fileHash, userB.address)).to.be.revertedWith("Not uploader");
 
       await fileVault.connect(userA).grantAccess(fileHash, userB.address);
       expect(await fileVault.isAuthorized(fileHash, userB.address)).to.be.true;
+    });
+
+    it("Should REVOKE previous owner's access after transfer (FIX #4)", async function () {
+      expect(await fileVault.isAuthorized(fileHash, uploader.address)).to.be.true;
+
+      await fileVault.connect(uploader).transferFileOwnership(fileHash, userA.address);
+
+      // Previous owner should NO LONGER have access
+      expect(await fileVault.isAuthorized(fileHash, uploader.address)).to.be.false;
+      await expect(fileVault.connect(uploader).getCid(fileHash)).to.be.revertedWith(
+        "Not authorized to access this file",
+      );
     });
   });
 
@@ -150,6 +164,74 @@ describe("FileVault v2 (Upgradeable) Tests", function () {
     it("Should prevent operations on non-existent files", async function () {
       const fakeHash = "0x" + "f".repeat(64);
       await expect(fileVault.getCid(fakeHash)).to.be.revertedWith("File does not exist");
+    });
+
+    it("Should PREVENT uploader from revoking own access (FIX #2)", async function () {
+      await fileVault.connect(uploader).storeFileHash(fileHash, cid, []);
+
+      await expect(fileVault.connect(uploader).revokeAccess(fileHash, uploader.address)).to.be.revertedWith(
+        "Cannot revoke own access",
+      );
+
+      expect(await fileVault.isAuthorized(fileHash, uploader.address)).to.be.true;
+    });
+
+    it("Should PREVENT bypassing MAX_ALLOWED_USERS via batch grant (FIX #1)", async function () {
+      await fileVault.connect(uploader).storeFileHash(fileHash, cid, []);
+
+      // Simulate being near the limit: Add 97 random users (uploader + 97 = 98 total)
+      const users: string[] = [];
+      for (let i = 0; i < 97; i++) {
+        users.push(ethers.Wallet.createRandom().address);
+      }
+
+      // Add users in batches to avoid gas issues
+      for (let i = 0; i < users.length; i += 20) {
+        const batch = users.slice(i, i + 20);
+        await fileVault.connect(uploader).grantAccessBatch(fileHash, batch);
+      }
+
+      expect(await fileVault.getUserCount(fileHash)).to.equal(98);
+
+      // Now we have 98 users. We can add 2 more to reach 100.
+      const twoMore = [ethers.Wallet.createRandom().address, ethers.Wallet.createRandom().address];
+      await fileVault.connect(uploader).grantAccessBatch(fileHash, twoMore);
+      expect(await fileVault.getUserCount(fileHash)).to.equal(100);
+
+      // Now we're at the limit. Try to add one more - should FAIL
+      await expect(
+        fileVault.connect(uploader).grantAccess(fileHash, ethers.Wallet.createRandom().address),
+      ).to.be.revertedWith("Too many users");
+
+      // The key test: Try batch grant with mix of duplicates and new users
+      // This would bypass the limit in the OLD vulnerable code
+      const mixedBatch = [
+        twoMore[0], // duplicate
+        twoMore[1], // duplicate
+        ethers.Wallet.createRandom().address, // new - should fail here
+      ];
+
+      // Should fail on the new address because we're at limit
+      await expect(fileVault.connect(uploader).grantAccessBatch(fileHash, mixedBatch)).to.be.revertedWith(
+        "Too many users",
+      );
+
+      // Verify count is still 100 (no users were added)
+      expect(await fileVault.getUserCount(fileHash)).to.equal(100);
+    });
+
+    it("Should use explicit error for userCount underflow (FIX #3)", async function () {
+      await fileVault.connect(uploader).storeFileHash(fileHash, cid, [userA.address]);
+
+      // Transfer ownership (this revokes uploader, grants to userB)
+      await fileVault.connect(uploader).transferFileOwnership(fileHash, userB.address);
+
+      // userCount should be maintained correctly
+      expect(await fileVault.getUserCount(fileHash)).to.equal(2); // userA + userB
+
+      // Revoke userA
+      await fileVault.connect(userB).revokeAccess(fileHash, userA.address);
+      expect(await fileVault.getUserCount(fileHash)).to.equal(1);
     });
   });
 
@@ -209,6 +291,70 @@ describe("FileVault v2 (Upgradeable) Tests", function () {
       // 2. Check new state variable
       await (fileVaultV2 as any).setFeatureName("Dark Mode Support");
       expect(await (fileVaultV2 as any).newFeatureName()).to.equal("Dark Mode Support");
+    });
+  });
+
+  describe("8. Contract Administration (Ownable)", function () {
+    it("Should transfer CONTRACT ownership to a new Admin", async function () {
+      // 1. Check initial owner is the deployer (uploader)
+      expect(await fileVault.owner()).to.equal(uploader.address);
+
+      // 2. Transfer Ownership to User A
+      await expect(fileVault.connect(uploader).transferOwnership(userA.address))
+        .to.emit(fileVault, "OwnershipTransferred")
+        .withArgs(uploader.address, userA.address);
+
+      // 3. Verify New Owner
+      expect(await fileVault.owner()).to.equal(userA.address);
+
+      // 4. Old Owner cannot pause anymore
+      await expect(fileVault.connect(uploader).pause()).to.be.revertedWithCustomError(
+        fileVault,
+        "OwnableUnauthorizedAccount",
+      );
+
+      // 5. New Owner CAN pause
+      await expect(fileVault.connect(userA).pause()).to.not.be.reverted;
+    });
+
+    it("Should prevent non-owners from transferring ownership", async function () {
+      await expect(fileVault.connect(attacker).transferOwnership(attacker.address)).to.be.revertedWithCustomError(
+        fileVault,
+        "OwnableUnauthorizedAccount",
+      );
+    });
+  });
+
+  describe("9. Advanced Security Integration Tests", function () {
+    it("Should handle complex ownership transfer with multiple users", async function () {
+      await fileVault.connect(uploader).storeFileHash(fileHash, cid, [userA.address, userB.address]);
+      expect(await fileVault.getUserCount(fileHash)).to.equal(3);
+
+      // Transfer to userC
+      await fileVault.connect(uploader).transferFileOwnership(fileHash, userC.address);
+
+      // Verify state
+      expect(await fileVault.isAuthorized(fileHash, uploader.address)).to.be.false;
+      expect(await fileVault.isAuthorized(fileHash, userA.address)).to.be.true;
+      expect(await fileVault.isAuthorized(fileHash, userB.address)).to.be.true;
+      expect(await fileVault.isAuthorized(fileHash, userC.address)).to.be.true;
+      expect(await fileVault.getUserCount(fileHash)).to.equal(3);
+    });
+
+    it("Should maintain security across delete and re-upload cycles", async function () {
+      // Upload with users
+      await fileVault.connect(uploader).storeFileHash(fileHash, cid, [userA.address]);
+      expect(await fileVault.getUserCount(fileHash)).to.equal(2);
+
+      // Delete
+      await fileVault.connect(uploader).deleteFile(fileHash);
+
+      // Re-upload (version increments, old users lose access)
+      await fileVault.connect(uploader).storeFileHash(fileHash, "QmNewCid", [userB.address]);
+
+      expect(await fileVault.isAuthorized(fileHash, userA.address)).to.be.false;
+      expect(await fileVault.isAuthorized(fileHash, userB.address)).to.be.true;
+      expect(await fileVault.getUserCount(fileHash)).to.equal(2); // uploader + userB
     });
   });
 });

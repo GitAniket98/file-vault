@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   11155420: {
     FileVault: {
-      address: "0xD59b3f13896F9a420bcF5BE1fF3601454b2665BE",
+      address: "0xcd6165e01a4edf651FfF8605b4d3Ee1FFa83B459",
       abi: [
         {
           inputs: [],
@@ -349,6 +349,25 @@ const deployedContracts = {
               internalType: "address",
               name: "",
               type: "address",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "bytes32",
+              name: "fileHash",
+              type: "bytes32",
+            },
+          ],
+          name: "getUserCount",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
             },
           ],
           stateMutability: "view",
