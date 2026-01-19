@@ -82,10 +82,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Invalid hex format" }, { status: 400 });
     }
 
-    // 4. Verify Blockchain State
-    const existsOnChain = await verifyFileExists(fileHashHex);
+    // 4. Verify Blockchain State (With Retry Logic)
+    // ---------------------------------------------------------
+    // CHANGE: Retry 5 times with 2s delay.
+    // This handles RPC latency where the node hasn't indexed the block yet.
+    let existsOnChain = false;
+    for (let i = 0; i < 5; i++) {
+      existsOnChain = await verifyFileExists(fileHashHex);
+      if (existsOnChain) break; // Found it!
+
+      console.log(`[commit-upload] Try ${i + 1}/5: File not found yet, waiting...`);
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+    }
+    // ---------------------------------------------------------
+
     if (!existsOnChain) {
-      console.warn(`[commit-upload] Verification Failed: File ${fileHashHex.slice(0, 10)} not on chain.`);
+      console.warn(`[commit-upload] Verification Failed: File ${fileHashHex.slice(0, 10)} not on chain after retries.`);
 
       await logFileAction({
         action: AuditAction.BLOCKCHAIN_VERIFY_FAILED,
@@ -99,9 +111,16 @@ export async function POST(req: NextRequest) {
 
       // Cleanup orphan pin
       await pinataUnpinCid(cid);
-      return NextResponse.json({ ok: false, error: "File verification failed on blockchain" }, { status: 409 });
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "File verification failed on blockchain (Consistency Error). Please try again in 1 minute.",
+        },
+        { status: 409 },
+      );
     }
 
+    // 4b. Verify Owner (Optional Retry - usually checking existence is enough latency buffer)
     const isOwner = await verifyOwner(fileHashHex, session.walletAddr);
     if (!isOwner) {
       console.warn(`[commit-upload] Ownership mismatch for ${session.walletAddr}`);

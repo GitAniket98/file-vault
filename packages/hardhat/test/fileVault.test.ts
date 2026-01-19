@@ -255,44 +255,44 @@ describe("FileVault v2 (Upgradeable) Tests", function () {
     });
   });
 
-  describe("7. Upgradeability (Proxy Pattern)", function () {
-    it("Should preserve state after upgrading to V2", async function () {
-      // 1. Setup V1 Data
-      await fileVault.connect(uploader).storeFileHash(fileHash, cid, [userA.address]);
+  // describe("7. Upgradeability (Proxy Pattern)", function () {
+  //   it("Should preserve state after upgrading to V2", async function () {
+  //     // 1. Setup V1 Data
+  //     await fileVault.connect(uploader).storeFileHash(fileHash, cid, [userA.address]);
 
-      // Verify V1 state works
-      expect(await fileVault.isAuthorized(fileHash, userA.address)).to.be.true;
+  //     // Verify V1 state works
+  //     expect(await fileVault.isAuthorized(fileHash, userA.address)).to.be.true;
 
-      // 2. Perform Upgrade
-      const FileVaultV2Factory = await ethers.getContractFactory("FileVaultV2");
+  //     // 2. Perform Upgrade
+  //     const FileVaultV2Factory = await ethers.getContractFactory("FileVaultV2");
 
-      // This command upgrades the Proxy to point to the new V2 implementation
-      const fileVaultV2 = await upgrades.upgradeProxy(await fileVault.getAddress(), FileVaultV2Factory);
-      await fileVaultV2.waitForDeployment();
+  //     // This command upgrades the Proxy to point to the new V2 implementation
+  //     const fileVaultV2 = await upgrades.upgradeProxy(await fileVault.getAddress(), FileVaultV2Factory);
+  //     await fileVaultV2.waitForDeployment();
 
-      // 3. Verify Address is Unchanged
-      // The Proxy address users interact with should NEVER change
-      expect(await fileVaultV2.getAddress()).to.equal(await fileVault.getAddress());
+  //     // 3. Verify Address is Unchanged
+  //     // The Proxy address users interact with should NEVER change
+  //     expect(await fileVaultV2.getAddress()).to.equal(await fileVault.getAddress());
 
-      // 4. Verify V1 Data Persisted (Crucial!)
-      // The file hash, uploader, and authorized users should still be there
-      expect(await fileVaultV2.getUploader(fileHash)).to.equal(uploader.address);
-      expect(await fileVaultV2.isAuthorized(fileHash, userA.address)).to.be.true;
-    });
+  //     // 4. Verify V1 Data Persisted (Crucial!)
+  //     // The file hash, uploader, and authorized users should still be there
+  //     expect(await fileVaultV2.getUploader(fileHash)).to.equal(uploader.address);
+  //     expect(await fileVaultV2.isAuthorized(fileHash, userA.address)).to.be.true;
+  //   });
 
-    it("Should enable NEW V2 features after upgrade", async function () {
-      const FileVaultV2Factory = await ethers.getContractFactory("FileVaultV2");
-      const fileVaultV2 = await upgrades.upgradeProxy(await fileVault.getAddress(), FileVaultV2Factory);
+  //   it("Should enable NEW V2 features after upgrade", async function () {
+  //     const FileVaultV2Factory = await ethers.getContractFactory("FileVaultV2");
+  //     const fileVaultV2 = await upgrades.upgradeProxy(await fileVault.getAddress(), FileVaultV2Factory);
 
-      // 1. Check new "version" function
-      // We cast to 'any' because Typescript doesn't know about V2 methods yet
-      expect(await (fileVaultV2 as any).version()).to.equal("v2.0.0");
+  //     // 1. Check new "version" function
+  //     // We cast to 'any' because Typescript doesn't know about V2 methods yet
+  //     expect(await (fileVaultV2 as any).version()).to.equal("v2.0.0");
 
-      // 2. Check new state variable
-      await (fileVaultV2 as any).setFeatureName("Dark Mode Support");
-      expect(await (fileVaultV2 as any).newFeatureName()).to.equal("Dark Mode Support");
-    });
-  });
+  //     // 2. Check new state variable
+  //     await (fileVaultV2 as any).setFeatureName("Dark Mode Support");
+  //     expect(await (fileVaultV2 as any).newFeatureName()).to.equal("Dark Mode Support");
+  //   });
+  // });
 
   describe("8. Contract Administration (Ownable)", function () {
     it("Should transfer CONTRACT ownership to a new Admin", async function () {

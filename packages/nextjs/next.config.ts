@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 // Define the Security Policy
-// Updated to whitelist Alchemy, WalletConnect, Coinbase, and Public RPCs.
+// Updated to whitelist Alchemy Optimism, Optimism Mainnet, and WalletConnect.
 const cspHeader = `
     default-src 'self';
     script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live;
@@ -19,6 +19,8 @@ const cspHeader = `
       https://gateway.pinata.cloud 
       https://sepolia.optimism.io 
       https://rpc.sepolia.org
+      https://mainnet.optimism.io
+      https://opt-mainnet.g.alchemy.com
       https://*.walletconnect.com 
       wss://*.walletconnect.org
       https://eth.merkle.io 

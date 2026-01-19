@@ -2,26 +2,30 @@
 
 /**
  * SIMPLIFIED BLOCKCHAIN VERIFICATION
- *
- * This module provides simple functions to verify access control
- * against the FileVault smart contract.
- *
- * Usage:
- *   const canAccess = await verifyAccess(fileHash, userAddress);
- *   if (!canAccess) return 403;
+ * Updated for Optimism Mainnet
  */
 import { Address, createPublicClient, http } from "viem";
-import { optimismSepolia } from "viem/chains";
+import { optimism } from "viem/chains";
+// 1. CHANGE: Import 'optimism' (Mainnet)
 import deployedContracts from "~~/contracts/deployedContracts";
 
-const CHAIN_ID = 11155420; // Optimism Sepolia
-const CONTRACT_ADDRESS = deployedContracts[CHAIN_ID].FileVault.address;
-const CONTRACT_ABI = deployedContracts[CHAIN_ID].FileVault.abi;
+//
+const CHAIN_ID = 10;
 
-// Create public client for blockchain reads
+const CONTRACT_ADDRESS = deployedContracts[CHAIN_ID]?.FileVault?.address;
+const CONTRACT_ABI = deployedContracts[CHAIN_ID]?.FileVault?.abi;
+
+if (!CONTRACT_ADDRESS || !CONTRACT_ABI) {
+  throw new Error(`Contract not found for chain ID ${CHAIN_ID}. Check deployedContracts.ts`);
+}
+
+//
+const alchemyKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY;
+const rpcUrl = alchemyKey ? `https://opt-mainnet.g.alchemy.com/v2/${alchemyKey}` : "https://mainnet.optimism.io";
+
 const publicClient = createPublicClient({
-  chain: optimismSepolia,
-  transport: http(),
+  chain: optimism, // 4. CHANGE: Use Mainnet chain object
+  transport: http(rpcUrl),
 });
 
 /**
@@ -37,10 +41,6 @@ function toBytes32(hex: string): `0x${string}` {
 
 /**
  * MAIN FUNCTION: Verify if user has access to a file
- *
- * @param fileHashHex - File hash (0x + 64 chars)
- * @param userAddress - User's wallet address
- * @returns true if authorized on blockchain, false otherwise
  */
 export async function verifyAccess(fileHashHex: string, userAddress: string): Promise<boolean> {
   try {
@@ -65,10 +65,6 @@ export async function verifyAccess(fileHashHex: string, userAddress: string): Pr
 
 /**
  * Verify if user owns a file
- *
- * @param fileHashHex - File hash
- * @param ownerAddress - Expected owner address
- * @returns true if owner matches on blockchain
  */
 export async function verifyOwner(fileHashHex: string, ownerAddress: string): Promise<boolean> {
   try {
@@ -92,9 +88,6 @@ export async function verifyOwner(fileHashHex: string, ownerAddress: string): Pr
 
 /**
  * Check if file exists on blockchain
- *
- * @param fileHashHex - File hash
- * @returns true if file exists on-chain
  */
 export async function verifyFileExists(fileHashHex: string): Promise<boolean> {
   try {
@@ -118,10 +111,6 @@ export async function verifyFileExists(fileHashHex: string): Promise<boolean> {
 
 /**
  * Batch verify access for multiple users (performance optimization)
- *
- * @param fileHashHex - File hash
- * @param userAddresses - Array of user addresses
- * @returns Map of address -> authorized status
  */
 export async function batchVerifyAccess(fileHashHex: string, userAddresses: string[]): Promise<Map<string, boolean>> {
   const results = new Map<string, boolean>();

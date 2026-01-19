@@ -16,7 +16,6 @@ import { bytesToHex } from "~~/lib/bytes";
 import { saveDeviceKey } from "~~/lib/deviceKeys";
 import { type RecipientUser, wrapAesKeyForRecipients } from "~~/lib/wrapKeys";
 import { aesEncryptFile, sha256Hex, uint8ToBlob } from "~~/utils/crypto";
-import { pinBlobToIPFS } from "~~/utils/ipfs";
 import { notification } from "~~/utils/scaffold-eth";
 
 // --- Types ---
@@ -180,11 +179,33 @@ export default function UploadPage() {
       });
 
       // ============================================
-      // STEP 2: Pin to IPFS
+      // STEP 2: Pin to IPFS (Secure Proxy)
       // ============================================
       setStatus("pinning");
       setMessage("Pinning encrypted data to IPFS...");
-      const { cid } = await pinBlobToIPFS(uint8ToBlob(enc.ciphertext), `${file.name}.enc`);
+
+      // Convert ciphertext to blob
+      const encryptedBlob = uint8ToBlob(enc.ciphertext);
+
+      // Send to our own API (Proxy)
+      const pinRes = await fetch("/api/ipfs/pin", {
+        method: "POST",
+        // The API expects the raw blob as the body
+        body: encryptedBlob,
+      });
+
+      if (!pinRes.ok) {
+        const errorText = await pinRes.text();
+        throw new Error(`IPFS Upload Failed: ${errorText}`);
+      }
+
+      const pinJson = await pinRes.json();
+
+      if (!pinJson.ok || !pinJson.cid) {
+        throw new Error(pinJson.error || "Failed to retrieve IPFS CID");
+      }
+
+      const cid = pinJson.cid;
       setLastCid(cid);
 
       // ============================================
