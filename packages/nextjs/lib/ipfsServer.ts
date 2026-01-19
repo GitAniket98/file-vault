@@ -5,7 +5,7 @@ try {
   if (dns.setDefaultResultOrder) {
     dns.setDefaultResultOrder("ipv4first");
   }
-} catch (e) {
+} catch {
   // Ignore
 }
 
@@ -84,7 +84,6 @@ export async function pinataUnpinCid(cid: string | null | undefined): Promise<vo
       return; // Don't retry client errors (400s)
     } catch (e: any) {
       lastError = e;
-      const isTimeout = e.name === "AbortError" || e.code === "ETIMEDOUT";
 
       // Only retry on network errors or timeouts
       if (attempt < MAX_RETRIES) {

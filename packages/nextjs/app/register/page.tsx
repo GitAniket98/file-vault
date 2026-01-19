@@ -18,18 +18,16 @@ type KeyStep = "idle" | "exporting" | "importing";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { address, chainId } = useAccount();
+  const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
 
   const [status, setStatus] = useState<Step>("idle");
   const [message, setMessage] = useState<string>("");
 
-  const [keyStatus, setKeyStatus] = useState<KeyStep>("idle");
+  const [, setKeyStatus] = useState<KeyStep>("idle");
   const [keyMessage, setKeyMessage] = useState<string>("");
   const [hasBackedUp, setHasBackedUp] = useState(false);
-
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const effectiveChainId = chainId ?? Number(process.env.NEXT_PUBLIC_CHAIN_ID || "31337");
 
   // Core Registration Logic: SIWE -> KeyGen -> Backend Register
   async function handleRegister() {

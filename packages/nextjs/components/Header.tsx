@@ -1,4 +1,3 @@
-// packages/nextjs/components/Header.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -10,26 +9,6 @@ import { useAccount } from "wagmi";
 import { Bars3Icon, ExclamationTriangleIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { AppSidebar } from "~~/components/AppSidebar";
 import { FaucetButton, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
-
-// packages/nextjs/components/Header.tsx
-
-// packages/nextjs/components/Header.tsx
-
-// packages/nextjs/components/Header.tsx
-
-// packages/nextjs/components/Header.tsx
-
-// packages/nextjs/components/Header.tsx
-
-// packages/nextjs/components/Header.tsx
-
-// packages/nextjs/components/Header.tsx
-
-// packages/nextjs/components/Header.tsx
-
-// packages/nextjs/components/Header.tsx
-
-// packages/nextjs/components/Header.tsx
 
 /* ---------------- Registration Badge Component ---------------- */
 
@@ -73,7 +52,7 @@ const RegistrationBadge = () => {
 
     check();
     // 3. Add pathname to dependency array so it runs on page switch
-  }, [address, pathname]);
+  }, [address, pathname, status]);
 
   if (!address || status === "unknown") return null;
 

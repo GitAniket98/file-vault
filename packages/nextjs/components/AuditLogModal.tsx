@@ -1,4 +1,3 @@
-// packages/nextjs/components/AuditLogModal.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -17,26 +16,6 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { notification } from "~~/utils/scaffold-eth";
-
-// packages/nextjs/components/AuditLogModal.tsx
-
-// packages/nextjs/components/AuditLogModal.tsx
-
-// packages/nextjs/components/AuditLogModal.tsx
-
-// packages/nextjs/components/AuditLogModal.tsx
-
-// packages/nextjs/components/AuditLogModal.tsx
-
-// packages/nextjs/components/AuditLogModal.tsx
-
-// packages/nextjs/components/AuditLogModal.tsx
-
-// packages/nextjs/components/AuditLogModal.tsx
-
-// packages/nextjs/components/AuditLogModal.tsx
-
-// packages/nextjs/components/AuditLogModal.tsx
 
 type AuditLogRow = {
   id: number;
@@ -178,7 +157,7 @@ export default function AuditLogModal({ isOpen, onClose, fileHashHex, filename }
         {/* Logs Timeline */}
         {!loading && logs.length > 0 && (
           <div className="space-y-3">
-            {logs.map((log, index) => (
+            {logs.map(log => (
               <div key={log.id} className={`card bg-base-200 p-4 ${!log.success ? "border-l-4 border-error" : ""}`}>
                 {/* Log Header */}
                 <div className="flex items-start justify-between mb-2">

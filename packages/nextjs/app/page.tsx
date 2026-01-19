@@ -1,4 +1,3 @@
-// packages/nextjs/app/page.tsx
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
@@ -20,26 +19,6 @@ import {
 } from "@heroicons/react/24/outline";
 import { type DeviceEncKeyRecord, hasKeyForUser, importDeviceEncKeyRecord } from "~~/lib/deviceEncKeys";
 import { notification } from "~~/utils/scaffold-eth";
-
-// packages/nextjs/app/page.tsx
-
-// packages/nextjs/app/page.tsx
-
-// packages/nextjs/app/page.tsx
-
-// packages/nextjs/app/page.tsx
-
-// packages/nextjs/app/page.tsx
-
-// packages/nextjs/app/page.tsx
-
-// packages/nextjs/app/page.tsx
-
-// packages/nextjs/app/page.tsx
-
-// packages/nextjs/app/page.tsx
-
-// packages/nextjs/app/page.tsx
 
 // Define the state machine for user authentication/connection status
 type UserState =

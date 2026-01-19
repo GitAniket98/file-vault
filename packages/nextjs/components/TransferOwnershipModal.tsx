@@ -1,4 +1,3 @@
-// packages/nextjs/components/TransferOwnershipModal.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -9,26 +8,6 @@ import { hexToUint8 } from "~~/lib/bytes";
 import { loadDeviceKey } from "~~/lib/deviceKeys";
 import { wrapAesKeyForRecipients } from "~~/lib/wrapKeys";
 import { notification } from "~~/utils/scaffold-eth";
-
-// packages/nextjs/components/TransferOwnershipModal.tsx
-
-// packages/nextjs/components/TransferOwnershipModal.tsx
-
-// packages/nextjs/components/TransferOwnershipModal.tsx
-
-// packages/nextjs/components/TransferOwnershipModal.tsx
-
-// packages/nextjs/components/TransferOwnershipModal.tsx
-
-// packages/nextjs/components/TransferOwnershipModal.tsx
-
-// packages/nextjs/components/TransferOwnershipModal.tsx
-
-// packages/nextjs/components/TransferOwnershipModal.tsx
-
-// packages/nextjs/components/TransferOwnershipModal.tsx
-
-// packages/nextjs/components/TransferOwnershipModal.tsx
 
 type Props = {
   isOpen: boolean;

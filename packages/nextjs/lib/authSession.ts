@@ -68,7 +68,7 @@ export async function getSessionFromRequest(req: NextRequest): Promise<Session |
       iat: typeof payload.iat === "number" ? payload.iat : undefined,
       exp: typeof payload.exp === "number" ? payload.exp : undefined,
     };
-  } catch (error) {
+  } catch {
     // Fail silently on auth errors (expired, signature mismatch)
     return null;
   }

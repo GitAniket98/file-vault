@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
   let blob: Blob;
   try {
     blob = await req.blob();
-  } catch (e) {
+  } catch {
     return NextResponse.json({ ok: false, error: "Invalid upload data" }, { status: 400 });
   }
 
