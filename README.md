@@ -1,4 +1,4 @@
-# File Vault (Web3 Encrypted Sharing)
+# <img src="packages/nextjs/public/logo.svg" alt="File Vault Logo" width="60" align="center" /> File Vault
 
 A decentralized, end-to-end encrypted file sharing platform running on **Optimism Mainnet**. Users can upload files, transfer ownership on-chain, and securely share access with specific recipients while maintaining complete data privacy.
 
